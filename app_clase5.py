@@ -3129,6 +3129,7 @@ sidebar_css = """
         width: 100%;
         text-align: left;
         justify-content: flex-start;
+        align-items: flex-start;
         padding: 0.52rem 0.7rem;
         margin: 0 0 0.18rem 0;
         border-radius: 0.82rem;
@@ -3139,6 +3140,18 @@ sidebar_css = """
         line-height: 1.2;
         font-size: 0.93rem;
         transition: all 0.18s ease;
+    }
+    section[data-testid="stSidebar"] div[data-testid="stButton"] > button div,
+    section[data-testid="stSidebar"] div[data-testid="stButton"] > button p,
+    section[data-testid="stSidebar"] div[data-testid="stButton"] > button span {
+        width: 100%;
+        text-align: left;
+        justify-content: flex-start;
+        align-items: flex-start;
+    }
+    section[data-testid="stSidebar"] div[data-testid="stButton"] > button p {
+        margin: 0;
+        white-space: normal;
     }
     section[data-testid="stSidebar"] div[data-testid="stButton"] > button:hover {
         background: rgba(255,255,255,0.92);
