@@ -438,6 +438,8 @@ def sec_kolmogorov():
     st.markdown("**Consecuencias inmediatas** (todo lo demás se deduce de estos 3):")
     st.latex(r"P(\emptyset) = 0, \quad P(A^c) = 1 - P(A), \quad A \subseteq B \Rightarrow P(A) \le P(B)")
     st.latex(r"P(A \cup B) = P(A) + P(B) - P(A \cap B) \quad \text{(inclusión-exclusión)}")
+    st.markdown("**Cota de la unión (Boole)**: aunque los eventos se sobrepongan, la probabilidad de la unión nunca supera la suma de probabilidades individuales.")
+    st.latex(r"P\Big(\bigcup_i E_i\Big)\le \sum_i P(E_i)")
     formula_walkthrough(
         "Lectura precisa de la terna $(\\Omega, \\mathcal A, P)$ y de los axiomas",
         formula=r"(\Omega, \mathcal A, P)",
@@ -775,6 +777,13 @@ def sec_laplace():
     num_par = comb(13, 1, exact=True) * comb(4, 2, exact=True) * comb(12, 3, exact=True) * (4**3)
     den_par = comb(52, 5, exact=True)
     st.latex(rf"P(\text{{par}}) = \frac{{{num_par}}}{{{den_par}}} \approx {num_par/den_par:.4f}")
+    num_poker = comb(13, 1, exact=True) * comb(4, 4, exact=True) * comb(48, 1, exact=True)
+    num_full = comb(13, 1, exact=True) * comb(4, 3, exact=True) * comb(12, 1, exact=True) * comb(4, 2, exact=True)
+    num_flush = 4 * comb(13, 5, exact=True)
+    st.markdown("Otros conteos clásicos del mismo mazo:")
+    st.latex(rf"P(\text{{póker}})=\frac{{13\binom{{4}}{{4}}\cdot48}}{{\binom{{52}}{{5}}}}=\frac{{{num_poker}}}{{{den_par}}}\approx {num_poker/den_par:.5f}")
+    st.latex(rf"P(\text{{full house}})=\frac{{13\binom{{4}}{{3}}\cdot12\binom{{4}}{{2}}}}{{\binom{{52}}{{5}}}}=\frac{{{num_full}}}{{{den_par}}}\approx {num_full/den_par:.5f}")
+    st.latex(rf"P(\text{{color simple}})=\frac{{4\binom{{13}}{{5}}}}{{\binom{{52}}{{5}}}}=\frac{{{num_flush}}}{{{den_par}}}\approx {num_flush/den_par:.5f}")
     formula_walkthrough(
         "Despiece del conteo del par en póker",
         steps=[
@@ -785,6 +794,15 @@ def sec_laplace():
             "Finalmente divides por $\\binom{52}{5}$ porque el espacio muestral son todas las manos de 5 cartas, sin importar el orden."
         ],
     )
+
+    worked_example("3 monedas honestas y monedas cargadas")
+    st.markdown(
+        "Con 3 monedas honestas hay $2^3=8$ resultados equiprobables. Exactamente 2 caras tiene 3 casos; "
+        "al menos 2 caras tiene 4 casos; ninguna cara tiene 1 caso."
+    )
+    st.latex(r"P(X=2)=\frac{3}{8},\qquad P(X\ge 2)=\frac{4}{8},\qquad P(X=0)=\frac{1}{8}")
+    st.markdown("Si cada moneda tiene $P(C)=p$ y $q=1-p$, los resultados ya no son equiprobables:")
+    st.latex(r"P(X=2)=3p^2(1-p),\qquad P(X\ge 2)=p^3+3p^2(1-p)")
 
     self_check_header()
     quiz(
@@ -1095,6 +1113,34 @@ def sec_bayes():
         "Lección: pequeños cambios en especificidad tiran abajo la confianza del test cuando la "
         "prevalencia es baja. Es la razón por la que tests de tamizaje se confirman con segundos tests."
     )
+
+    worked_example("moneda cargada: identificar la hipótesis correcta")
+    st.markdown(
+        "Tenemos 3 monedas: dos honestas y una cargada con $P(C)=2/3$. Se lanzan las tres y se observa $B=CCS$. "
+        "Sea $E_i$ el evento de que la moneda cargada sea la $i$-ésima."
+    )
+    st.latex(
+        r"P(E_1\mid B)=\frac{P(B\mid E_1)P(E_1)}{\sum_{i=1}^3 P(B\mid E_i)P(E_i)}"
+        r"=\frac{(2/3)(1/2)(1/2)(1/3)}{(1/18)+(1/18)+(1/36)}=\frac{2}{5}"
+    )
+
+    worked_example("filtro de spam con la palabra Descuento")
+    st.markdown(
+        "Si $P(Spam)=0.20$, $P(Descuento\\mid Spam)=0.70$ y $P(Descuento\\mid Ham)=0.05$, entonces:"
+    )
+    st.latex(
+        r"P(Spam\mid Descuento)=\frac{0.70\cdot0.20}{0.70\cdot0.20+0.05\cdot0.80}\approx0.778"
+    )
+
+    worked_example("test covid con baja positividad")
+    st.markdown(
+        "Con prevalencia $P(D)=0.003$, sensibilidad $0.95$ y especificidad $0.78$, el posterior dado positivo es bajo "
+        "porque los falsos positivos vienen de una población sana mucho más grande."
+    )
+    st.latex(
+        r"P(D\mid +)=\frac{0.95\cdot0.003}{0.95\cdot0.003+0.22\cdot0.997}\approx0.0128"
+    )
+
     pitfall(
         "Confundir sensibilidad con valor predictivo positivo. Sensibilidad responde 'si realmente hay enfermedad, ¿el test sale positivo?'; "
         "el posterior responde 'si salió positivo, ¿qué tan probable es que haya enfermedad?'. Son preguntas distintas."
@@ -1263,11 +1309,12 @@ def sec_naive_bayes():
         "        return self\n"
         "    def predict_log_proba(self, X):\n"
         "        lp = np.log(self.priors_)[None, :]\n"
+        "        logprobs = np.zeros((len(X), len(self.classes_)))\n"
         "        for c_idx in range(len(self.classes_)):\n"
-        "            diff2 = (X[:, None, :] - self.mu_[None, c_idx, :])**2\n"
+        "            diff2 = (X - self.mu_[c_idx])**2\n"
         "            ll = -0.5*np.sum(np.log(2*np.pi*self.var_[c_idx]) + diff2/self.var_[c_idx], axis=-1)\n"
-        "            lp = lp + 0  # see full impl; shown schematic\n"
-        "        return lp\n",
+        "            logprobs[:, c_idx] = lp[:, c_idx] + ll\n"
+        "        return logprobs\n",
         language="python"
     )
     st.markdown("Comparación con sklearn sobre el dataset Wine:")
@@ -1676,6 +1723,28 @@ def sec_distribuciones():
         )
         st.info("**Varianza de Bernoulli** = $p(1-p)$ → máxima en $p=0.5$ (máxima incertidumbre).")
 
+        worked_example("control de calidad con distribución hipergeométrica")
+        st.markdown(
+            "Muestreo sin reemplazo desde un lote finito: $N$ items totales, $K$ defectuosos, muestra de tamaño $n$, "
+            "y $X$ = defectuosos encontrados."
+        )
+        st.latex(r"P(X=x)=\frac{\binom{K}{x}\binom{N-K}{n-x}}{\binom{N}{n}}")
+        c1, c2 = st.columns([1, 2])
+        with c1:
+            N_h = st.slider("N lote", 20, 300, 100, key="hyp_N")
+            K_h = st.slider("K defectuosos", 1, N_h - 1, min(12, N_h - 1), key="hyp_K")
+            n_hyp = st.slider("n muestra", 1, min(60, N_h), min(10, N_h), key="hyp_n")
+        xs_h = np.arange(max(0, n_hyp - (N_h - K_h)), min(K_h, n_hyp) + 1)
+        pmf_h = stats.hypergeom.pmf(xs_h, N_h, K_h, n_hyp)
+        with c2:
+            fig, ax = plt.subplots(figsize=(7, 3))
+            ax.bar(xs_h, pmf_h, color="#4C72B0")
+            ax.set_xlabel("x defectuosos en la muestra")
+            ax.set_ylabel("P(X=x)")
+            ax.set_title(f"Hipergeom(N={N_h}, K={K_h}, n={n_hyp})")
+            st.pyplot(fig); plt.close(fig)
+        st.metric("E[X]", f"{n_hyp*K_h/N_h:.3f}")
+
     with tabs[1]:
         st.markdown("#### Distribuciones continuas")
         st.markdown(
@@ -1689,6 +1758,34 @@ def sec_distribuciones():
             "| **Student-$t_\\nu$** | $\\propto(1+x^2/\\nu)^{-(\\nu+1)/2}$ | $0$ ($\\nu>1$) | $\\nu/(\\nu-2)$ ($\\nu>2$) | Muestras pequeñas, colas pesadas |\n"
         )
         st.latex(r"\text{Integral gaussiana (útil recordar):}\quad \int_{-\sigma}^{\sigma} f_{N(0,\sigma^2)}(x)\,dx \approx \tfrac{2}{3} \ \Rightarrow\ P(\mu-\sigma\le X\le \mu+\sigma)\approx 68\%")
+
+        worked_example("transformada inversa desde Uniforme(0,1)")
+        st.markdown(
+            "La uniforme es el motor de simulación: si $U\\sim Unif(0,1)$ y $F$ es una CDF invertible, entonces $X=F^{-1}(U)$ tiene CDF $F$."
+        )
+        c1, c2 = st.columns([1, 2])
+        with c1:
+            inv_kind = st.radio("Distribución generada", ["Exponencial", "Logística"], key="inv_kind")
+            inv_n = st.slider("muestras", 200, 5000, 1000, step=200, key="inv_n")
+        rng_inv = np.random.default_rng(314)
+        u = rng_inv.uniform(1e-6, 1 - 1e-6, inv_n)
+        if inv_kind == "Exponencial":
+            x_inv = -np.log(1 - u)
+            x_grid = np.linspace(0, np.quantile(x_inv, 0.995), 300)
+            pdf_grid = stats.expon.pdf(x_grid)
+            formula_inv = r"F^{-1}(u)=-\log(1-u)"
+        else:
+            x_inv = np.log(u / (1 - u))
+            x_grid = np.linspace(np.quantile(x_inv, 0.005), np.quantile(x_inv, 0.995), 300)
+            pdf_grid = stats.logistic.pdf(x_grid)
+            formula_inv = r"F^{-1}(u)=\log\frac{u}{1-u}"
+        with c2:
+            fig, ax = plt.subplots(figsize=(7, 3))
+            ax.hist(x_inv, bins=35, density=True, color="#4C72B0", alpha=0.65, label="muestras")
+            ax.plot(x_grid, pdf_grid, color="#DD8452", lw=2, label="densidad teórica")
+            ax.legend()
+            st.pyplot(fig); plt.close(fig)
+        st.latex(formula_inv)
 
     with tabs[2]:
         st.markdown("#### Aproximaciones útiles a Binomial")
@@ -2047,13 +2144,14 @@ def sec_esperanza_jensen():
         f = lambda x: np.log(x); xp = np.linspace(0.05, mu+3*sig, 200)
     else:
         f = lambda x: np.exp(x); xp = np.linspace(mu-3*sig, mu+3*sig, 200)
-    EfX = np.mean(f(xs)); fEX = f(mu)
+    empirical_EX = float(np.mean(xs))
+    EfX = np.mean(f(xs)); fEX = f(empirical_EX)
     with col2:
         fig, ax = plt.subplots(figsize=(7, 3.5))
         ax.plot(xp, f(xp), color="#4C72B0", lw=2, label="f(x)")
-        ax.scatter([mu], [fEX], color="#DD8452", s=90, zorder=5, label=f"f(E[X])={fEX:.2f}")
+        ax.scatter([empirical_EX], [fEX], color="#DD8452", s=90, zorder=5, label=f"f(E[X])={fEX:.2f}")
         ax.axhline(EfX, color="#55A868", ls="--", label=f"E[f(X)]={EfX:.2f}")
-        ax.axvline(mu, color="gray", ls=":", alpha=0.5)
+        ax.axvline(empirical_EX, color="gray", ls=":", alpha=0.5)
         ax.legend(); ax.set_xlabel("x")
         st.pyplot(fig); plt.close(fig)
     delta = EfX - fEX
@@ -2094,8 +2192,8 @@ def sec_fgm_cov():
         "Herramientas para comparar distribuciones (FGM) y cuantificar relaciones lineales entre variables."
     )
     motivation(
-        "La **FGM** empaqueta *todos* los momentos ($E[X], E[X^2], ...$) en una sola función: si dos VAs "
-        "tienen la misma FGM, son iguales en distribución. Útil para probar propiedades de sumas. "
+        "La **FGM** empaqueta *todos* los momentos ($E[X], E[X^2], ...$) en una sola función: si la FGM existe "
+        "en un entorno de 0 y dos VAs tienen la misma FGM en ese entorno, entonces son iguales en distribución. Útil para probar propiedades de sumas. "
         "La **covarianza** y **correlación** miden qué tan juntas se mueven dos VAs."
     )
     prerequisites_box(
@@ -2108,7 +2206,7 @@ def sec_fgm_cov():
     st.latex(r"M_X^{(k)}(0) = E[X^k]")
     st.markdown("**Propiedades clave**:")
     st.markdown(
-        "- Unicidad: misma FGM ⇒ misma distribución.\n"
+        "- Unicidad: misma FGM en un entorno de 0 ⇒ misma distribución.\n"
         "- Suma de independientes: $M_{X+Y}(t) = M_X(t)\\,M_Y(t)$.\n"
         "- Ejemplo Gamma($\\alpha, \\lambda$): $M(t) = (\\lambda/(\\lambda-t))^\\alpha$ para $t<\\lambda$."
     )
@@ -2333,6 +2431,47 @@ def sec_pca():
         st.pyplot(fig); plt.close(fig)
     how_to_read("PC1 apunta en la dirección de máxima varianza. Si los datos están muy estirados en una dirección, PC1 la recupera.")
 
+    interactive_header("Mini-casos PCA/SVD de los notebooks")
+    st.markdown(
+        "Estos casos replican la idea de los notebooks: columnas fuertemente dependientes producen pocos valores singulares dominantes. "
+        "La escala de los autovalores cambia si divides por $N$ o por $N-1$, pero las direcciones principales no."
+    )
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        pca_case = st.selectbox(
+            "caso sintético",
+            ["X=[x, x+1, x+2]", "X=[x, 2x+1, 3x+2, 4x]", "toy sinusoidal"],
+            key="pca_case_notebook",
+        )
+    x_nb = np.linspace(-3, 3, 120)
+    if pca_case.startswith("X=[x, x+1"):
+        X_nb = np.column_stack([x_nb, x_nb + 1, x_nb + 2])
+    elif pca_case.startswith("X=[x, 2x"):
+        X_nb = np.column_stack([x_nb, 2 * x_nb + 1, 3 * x_nb + 2, 4 * x_nb])
+    else:
+        X_nb = np.column_stack([x_nb, np.sin(2 * x_nb), np.cos(x_nb)])
+    Xc_nb = X_nb - X_nb.mean(axis=0, keepdims=True)
+    _, S_nb, Vt_nb = np.linalg.svd(Xc_nb, full_matrices=False)
+    evr_nb = S_nb**2 / np.sum(S_nb**2)
+    proj_nb = Xc_nb @ Vt_nb[:2].T
+    with col2:
+        fig, axes = plt.subplots(1, 2, figsize=(10, 3.6))
+        axes[0].bar(np.arange(1, len(evr_nb) + 1), evr_nb, color="#4C72B0")
+        axes[0].set_ylim(0, 1)
+        axes[0].set_xlabel("componente")
+        axes[0].set_ylabel("explained variance ratio")
+        axes[1].scatter(proj_nb[:, 0], proj_nb[:, 1], s=16, alpha=0.7, color="#DD8452")
+        axes[1].set_xlabel("PC1")
+        axes[1].set_ylabel("PC2")
+        axes[1].set_title("proyección 2D")
+        plt.tight_layout()
+        st.pyplot(fig); plt.close(fig)
+    st.dataframe(
+        pd.DataFrame({"PC": np.arange(1, len(evr_nb) + 1), "explained_variance_ratio": np.round(evr_nb, 5)}),
+        hide_index=True,
+        use_container_width=True,
+    )
+
     self_check_header()
     quiz(
         "Los ejes principales que devuelve PCA son los autovectores de...",
@@ -2503,6 +2642,15 @@ def sec_concentration():
     )
     st.latex(r"n \geq \frac{\ln(2/\delta)}{2\epsilon^2} = \frac{\ln(40)}{2\cdot 0.0025} \approx 738")
 
+    worked_example("Markov y Chebyshev en ejercicios clÃ¡sicos")
+    st.markdown("**Caras en $n$ lanzamientos.** Si $X$ cuenta caras en $n$ monedas justas, $E[X]=n/2$ y $Var(X)=n/4$.")
+    st.latex(r"P(X\ge 3n/4)\le \frac{E[X]}{3n/4}=\frac{2}{3}\quad\text{(Markov)}")
+    st.latex(r"P(X\ge 3n/4)\le P(|X-n/2|\ge n/4)\le \frac{n/4}{(n/4)^2}=\frac{4}{n}\quad\text{(Chebyshev)}")
+    st.markdown("**Coleccionador de cupones.** Si $X$ es el tiempo hasta juntar $n$ cupones, $E[X]=nH_n$.")
+    st.latex(r"P(X\ge 2nH_n)\le \frac{E[X]}{2nH_n}=\frac{1}{2}")
+    st.markdown("**Suma de dos dados repetida $n$ veces.** Cada lanzamiento doble tiene media $7$ y varianza $35/6$.")
+    st.latex(r"P\left(|S_n-7n|\ge 10\sqrt n\right)\le \frac{(35/6)n}{100n}=\frac{35}{600}\approx0.058")
+
     interactive_header("Comparador de cotas")
     col1, col2 = st.columns([1, 2])
     with col1:
@@ -2646,6 +2794,7 @@ def sec_samples_pooled():
         "para $k$ personas. Si positivo → $1+k$ tests para ese grupo. Total esperado:"
     )
     st.latex(r"E[Z] = \frac{N}{k}\Big[1 + k\cdot (1 - (1-p)^k)\Big]")
+    st.caption("Esta forma cerrada supone que $N$ es divisible por $k$. En el laboratorio se maneja tambiÃ©n el grupo residual si sobra gente.")
     st.markdown("Para $N=1000, p=0.01, k=10$:")
     k0 = 10; p0 = 0.01; N0 = 1000
     ez = (N0/k0) * (1 + k0*(1 - (1-p0)**k0))
@@ -2672,7 +2821,12 @@ def sec_samples_pooled():
         p_slider = st.slider("Prevalencia p", 0.001, 0.2, 0.01, step=0.001, format="%.3f", key="pool_p")
         N_slider = st.slider("N total", 100, 10000, 1000, step=100, key="pool_N")
     ks = np.arange(1, 51)
-    EZ = (N_slider/ks) * (1 + ks*(1 - (1-p_slider)**ks))
+    def _expected_pooled_tests(N, k, p):
+        full_groups, remainder = divmod(int(N), int(k))
+        expected_full = full_groups * (1 + k * (1 - (1 - p) ** k))
+        expected_remainder = 0 if remainder == 0 else 1 + remainder * (1 - (1 - p) ** remainder)
+        return expected_full + expected_remainder
+    EZ = np.array([_expected_pooled_tests(N_slider, k, p_slider) for k in ks])
     k_opt = ks[np.argmin(EZ)]
     with col2:
         fig, ax = plt.subplots(figsize=(7, 3.2))
@@ -2729,6 +2883,10 @@ def sec_limits():
     )
     st.markdown("**Desigualdad de Kolmogorov** (máxima de sumas parciales):")
     st.latex(r"P\!\left(\max_{1\leq k\leq n} |S_k - k\mu| \geq \epsilon\right) \leq \frac{\text{Var}(S_n)}{\epsilon^2}")
+    st.caption(
+        "Hipótesis: sumas parciales de variables independientes con varianza finita; equivalentemente, "
+        "aplicar la desigualdad a la forma centrada $S_k-k\\mu$."
+    )
 
     st.markdown("### Teorema Central del Límite (CLT)")
     st.latex(r"\frac{\bar X_n - \mu}{\sigma/\sqrt{n}} \xrightarrow{d} \mathcal N(0,1)")
@@ -2935,6 +3093,60 @@ def sec_randomized():
         "**Quickselect** sólo recursa en el lado que contiene el $k$. El análisis análogo da $E[\\#\\text{comp}]=O(n)$."
     )
 
+    worked_example("algoritmo de mediana aleatorizada de los insumos")
+    st.markdown(
+        "El algoritmo de mediana aleatorizada toma una muestra con reemplazo de tamaño $\\lceil n^{3/4}\\rceil$, "
+        "ordena esa muestra, elige dos pivotes alrededor de su centro y sólo ordena el conjunto candidato "
+        "$C=\\{x: d\\le x\\le u\\}$. Si los pivotes dejan fuera a la mediana o $C$ sale demasiado grande, declara fallo."
+    )
+    st.latex(r"P(\text{fallo}) \le n^{-1/4}")
+
+    def _randomized_median_trial(a, rng):
+        n = len(a)
+        r_size = int(np.ceil(n ** 0.75))
+        sample = np.sort(rng.choice(a, size=r_size, replace=True))
+        spread = int(np.ceil(np.sqrt(n)))
+        center = r_size // 2
+        d = sample[max(0, center - spread)]
+        u = sample[min(r_size - 1, center + spread)]
+        if d > u:
+            d, u = u, d
+        C = a[(a >= d) & (a <= u)]
+        ld = int(np.sum(a < d))
+        lu = int(np.sum(a > u))
+        target = (n - 1) // 2
+        fail = ld > target or lu > n - target - 1 or len(C) > 4 * r_size or not (ld <= target < ld + len(C))
+        if fail:
+            return None, len(C)
+        return int(np.sort(C)[target - ld]), len(C)
+
+    interactive_header("Mediana aleatorizada: tasa empírica de fallo")
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        n_med = st.slider("n elementos", 101, 5001, 1001, step=100, key="med_n")
+        if n_med % 2 == 0:
+            n_med += 1
+        med_runs = st.slider("corridas", 20, 400, 120, step=20, key="med_runs")
+    rng_med = np.random.default_rng(404)
+    base_med = rng_med.permutation(n_med)
+    true_med = int(np.median(base_med))
+    failures = 0
+    c_sizes = []
+    for _ in range(med_runs):
+        pred, c_len = _randomized_median_trial(base_med, np.random.default_rng(int(rng_med.integers(1_000_000))))
+        failures += int(pred != true_med)
+        c_sizes.append(c_len)
+    fail_rate = failures / med_runs
+    with col2:
+        fig, ax = plt.subplots(figsize=(7, 3))
+        ax.hist(c_sizes, bins=20, color="#4C72B0", alpha=0.75)
+        ax.axvline(4 * np.ceil(n_med ** 0.75), color="#DD8452", ls="--", label=r"$4n^{3/4}$")
+        ax.set_xlabel("|C|")
+        ax.set_ylabel("frecuencia")
+        ax.legend()
+        st.pyplot(fig); plt.close(fig)
+    st.metric("fallo empírico", f"{fail_rate:.3f}", f"cota n^(-1/4) = {n_med**(-0.25):.3f}")
+
     interactive_header("Benchmark: Quicksort determinista vs aleatorizado")
     interactive_guide(
         controls=[
@@ -3052,6 +3264,105 @@ def sec_randomized():
     )
 
 # ==================================================================
+# SECCIÓN 17 — DESCENSO DE GRADIENTE Y BACKTRACKING
+# ==================================================================
+def sec_gradient_backtracking():
+    section_title(
+        "17. Descenso de Gradiente y Backtracking",
+        "Aplicación computacional de Semana 8: cómo el tamaño de paso controla la trayectoria."
+    )
+    motivation(
+        "El notebook de Semana 8 estudia descenso de gradiente sobre cuadráticas. Aunque es optimización, "
+        "conecta directamente con IA: entrenar modelos es iterar parámetros en dirección opuesta al gradiente."
+    )
+    prerequisites_box(
+        "- Gradiente: dirección de mayor crecimiento local.\n"
+        "- Descenso: $x_{t+1}=x_t-\\gamma\\nabla f(x_t)$.\n"
+        "- Backtracking: reducir $\\gamma$ hasta que el paso realmente disminuya la función."
+    )
+
+    st.markdown("### Descenso zig-zag en una cuadrática anisotrópica")
+    st.latex(r"f(x,y)=\tfrac12(x^2+b y^2),\qquad \nabla f(x,y)=(x,by)")
+    st.markdown(
+        "Cuando las curvaturas por eje son muy distintas, un paso fijo puede producir trayectorias en zig-zag. "
+        "El notebook usa $\\gamma=2/(b+1)$ para visualizar ese efecto."
+    )
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        b_gd = st.slider("b", 0.02, 2.0, 0.05, step=0.01, key="gd_b")
+        gamma_mode = st.radio("paso", ["2/(b+1)", "manual"], key="gd_mode")
+        gamma_gd = 2 / (b_gd + 1) if gamma_mode.startswith("2/") else st.slider("gamma", 0.01, 2.5, 0.3, key="gd_gamma")
+        n_iter_gd = st.slider("iteraciones", 5, 80, 30, key="gd_iters")
+    x = np.array([2.0, 1.5])
+    path = [x.copy()]
+    for _ in range(n_iter_gd):
+        grad = np.array([x[0], b_gd * x[1]])
+        x = x - gamma_gd * grad
+        path.append(x.copy())
+    path = np.array(path)
+    with col2:
+        xx, yy = np.meshgrid(np.linspace(-2.3, 2.3, 160), np.linspace(-2.0, 2.0, 160))
+        zz = 0.5 * (xx**2 + b_gd * yy**2)
+        fig, ax = plt.subplots(figsize=(6.8, 4.2))
+        ax.contour(xx, yy, zz, levels=18, cmap="viridis")
+        ax.plot(path[:, 0], path[:, 1], "o-", color="#DD8452", ms=3)
+        ax.scatter([0], [0], color="black", s=30, label="mínimo")
+        ax.set_xlabel("x")
+        ax.set_ylabel("y")
+        ax.set_title(f"gamma={gamma_gd:.3f}, f final={0.5*(path[-1,0]**2+b_gd*path[-1,1]**2):.4f}")
+        ax.legend()
+        st.pyplot(fig); plt.close(fig)
+    how_to_read("La trayectoria naranja muestra los parámetros. Si el paso es grande respecto de la curvatura, aparece oscilación.")
+
+    interactive_header("Backtracking line search")
+    st.markdown(
+        "Backtracking parte con un paso candidato y lo reduce por un factor $\\beta$ hasta satisfacer una condición tipo Armijo."
+    )
+    st.latex(r"f(x-\gamma\nabla f(x))\le f(x)-\alpha\gamma\|\nabla f(x)\|^2")
+    col1, col2 = st.columns([1, 2])
+    with col1:
+        alpha_bt = st.slider("alpha Armijo", 0.0, 0.5, 0.1, step=0.05, key="bt_alpha")
+        beta_bt = st.slider("beta reducción", 0.1, 0.9, 0.5, step=0.05, key="bt_beta")
+        n_bt = st.slider("iteraciones backtracking", 5, 80, 35, key="bt_iters")
+
+    def _f_bt(z):
+        return 0.5 * (z[0] ** 2 + 10 * z[1] ** 2)
+
+    def _g_bt(z):
+        return np.array([z[0], 10 * z[1]])
+
+    z = np.array([2.0, 1.0])
+    bt_path = [z.copy()]
+    bt_steps = []
+    for _ in range(n_bt):
+        g = _g_bt(z)
+        step = 1.0
+        while _f_bt(z - step * g) > _f_bt(z) - alpha_bt * step * np.dot(g, g):
+            step *= beta_bt
+            if step < 1e-8:
+                break
+        z = z - step * g
+        bt_path.append(z.copy())
+        bt_steps.append(step)
+    bt_path = np.array(bt_path)
+    with col2:
+        xx, yy = np.meshgrid(np.linspace(-2.2, 2.2, 160), np.linspace(-1.2, 1.2, 160))
+        zz = 0.5 * (xx**2 + 10 * yy**2)
+        fig, axes = plt.subplots(1, 2, figsize=(10, 3.6))
+        axes[0].contour(xx, yy, zz, levels=20, cmap="viridis")
+        axes[0].plot(bt_path[:, 0], bt_path[:, 1], "o-", color="#DD8452", ms=3)
+        axes[0].set_title("trayectoria")
+        axes[0].set_xlabel("x0")
+        axes[0].set_ylabel("x1")
+        axes[1].plot(bt_steps, "o-", color="#4C72B0")
+        axes[1].set_title("pasos aceptados")
+        axes[1].set_xlabel("iteración")
+        axes[1].set_ylabel("gamma")
+        plt.tight_layout()
+        st.pyplot(fig); plt.close(fig)
+    st.metric("f final", f"{_f_bt(bt_path[-1]):.6f}")
+
+# ==================================================================
 #                   NAVEGACIÓN / SIDEBAR
 # ==================================================================
 st.sidebar.title("MIA — Probabilidad para IA")
@@ -3074,6 +3385,7 @@ SECTIONS = {
     "14. Muestras y Testeo Agrupado": sec_samples_pooled,
     "15. Leyes Límite: LLN y CLT": sec_limits,
     "16. Algoritmos Aleatorizados": sec_randomized,
+    "17. Descenso de Gradiente y Backtracking": sec_gradient_backtracking,
 }
 
 NAV_GROUPS = {
@@ -3106,6 +3418,7 @@ NAV_GROUPS = {
     ],
     "Aplicaciones algorítmicas": [
         "16. Algoritmos Aleatorizados",
+        "17. Descenso de Gradiente y Backtracking",
     ],
 }
 
