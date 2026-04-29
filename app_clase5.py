@@ -312,9 +312,6 @@ def learning_goal(text):
 def lab_note(text):
     st.caption(f"Lectura rápida: {text}")
 
-def source_note(text):
-    st.caption(f"Fuente base: {text}")
-
 def beginner_bridge(title, bullets):
     with st.expander(f"Si no sabes nada: {title}", expanded=True):
         for bullet in bullets:
@@ -365,7 +362,7 @@ def real_world_case(title, situation, controls=None, takeaway=None, expanded=Tru
         if controls:
             st.markdown("**Cómo leer los controles en este caso**")
             for name, desc in controls:
-                st.markdown(f"- `{name}`: {desc}")
+                st.markdown(f"- **{name}**: {desc}")
         if takeaway:
             st.markdown("**Qué decisión o lectura permite hacer**")
             st.markdown(takeaway)
@@ -388,7 +385,7 @@ def interactive_guide(controls=None, procedure=None, observe=None, expanded=Fals
         if controls:
             st.markdown("**Qué controla cada parámetro**")
             for name, desc in controls:
-                st.markdown(f"- `{name}`: {desc}")
+                st.markdown(f"- **{name}**: {desc}")
         if procedure:
             st.markdown("**Qué procedimiento se ejecuta**")
             st.markdown(procedure)
@@ -1312,7 +1309,7 @@ def sec_bayes():
         "la enorme población sana dominan."
     )
 
-    worked_example("test de drogas (Clase 6)")
+    worked_example("test de drogas")
     st.markdown(
         "Prevalencia $P(D)=0.10$. Test con sensibilidad $P(+\\mid D)=0.9$.\n\n"
         "**Caso A** — especificidad $P(-\\mid \\lnot D)=0.9$:"
@@ -2557,7 +2554,6 @@ def sec_fgm_cov():
         "10. Función Generadora de Momentos, Covarianza y Correlación",
         "Herramientas para comparar distribuciones (FGM) y cuantificar relaciones lineales entre variables."
     )
-    source_note("Clase7.pdf, págs. 4-13: dependencia multivariada, covarianza/correlación y FGM.")
     beginner_bridge(
         "qué problema resuelve esta sección",
         [
@@ -2686,8 +2682,8 @@ def sec_fgm_cov():
 
     interactive_header("Dependencia lineal y no lineal")
     lab_task(
-        predict="antes de mover rho, decide si esperas una nube inclinada hacia arriba, hacia abajo o sin inclinación.",
-        manipulate="cambia rho, el patrón no lineal y el ruido.",
+        predict="antes de mover ρ, decide si esperas una nube inclinada hacia arriba, hacia abajo o sin inclinación.",
+        manipulate="cambia ρ, el patrón no lineal y el ruido.",
         verify="compara lo que ves en la nube con la covarianza/correlación que muestra el título.",
     )
     real_world_case(
@@ -2698,7 +2694,7 @@ def sec_fgm_cov():
             ("correlación deseada ρ", "fuerza y dirección de una relación lineal simulada."),
             ("patrón de dependencia", "forma de relación no lineal donde puede haber dependencia aunque la correlación sea cercana a cero."),
         ],
-        takeaway="Un rho cercano a cero no prueba que no haya relación; sólo dice que no se detecta una relación lineal fuerte.",
+        takeaway="Una correlación cercana a cero no prueba que no haya relación; sólo dice que no se detecta una relación lineal fuerte.",
         expanded=False,
     )
     tabs = st.tabs(["Correlación ajustable", "Dependencia con ρ≈0"])
@@ -2787,7 +2783,6 @@ def sec_pca():
         "11. Gaussiana Multivariada y PCA vía SVD",
         "De una variable a muchas correlacionadas: la geometría de elipses y cómo encontrar sus ejes principales."
     )
-    source_note("Clase7.pdf, págs. 4-7, y Probabilidad y Estadistica.ipynb, celdas 16-26: normal bivariada, covarianza, SVD/PCA y toy problem.")
     beginner_bridge(
         "cómo leer PCA sin álgebra avanzada",
         [
@@ -2843,8 +2838,8 @@ def sec_pca():
 
     interactive_header("Gaussiana bivariada — heatmap con covarianza ajustable")
     lab_task(
-        predict="si rho se acerca a 1 o -1, la elipse debería inclinarse y alargarse.",
-        manipulate="cambia las desviaciones marginales y rho.",
+        predict="si la correlación se acerca a 1 o -1, la elipse debería inclinarse y alargarse.",
+        manipulate="cambia las desviaciones marginales y la correlación.",
         verify="mira si las flechas rojas (ejes principales) coinciden con la orientación de la elipse.",
     )
     interactive_guide(
@@ -2885,7 +2880,7 @@ def sec_pca():
     st.caption(f"Σ={np.round(Sigma,2).tolist()}, autovalores={np.round(eigvals,2).tolist()}. σ₁ y σ₂ son dispersiones marginales; los ejes principales reales son las flechas rojas.")
 
     st.markdown("### PCA vía SVD")
-    st.caption("Cruce con notebook: este bloque corresponde al pipeline centrar datos → covarianza/SVD → direcciones principales → varianza explicada.")
+    st.caption("Pipeline conceptual: centrar datos → covarianza/SVD → direcciones principales → varianza explicada.")
     st.markdown(
         "Dado un dataset $X \\in \\mathbb{R}^{N\\times d}$ **centrado**, computamos SVD:"
     )
@@ -2936,9 +2931,9 @@ def sec_pca():
     how_to_read("PC1 apunta en la dirección de máxima varianza. Si los datos están muy estirados en una dirección, PC1 la recupera.")
     st.caption("PC1 es la dirección donde los datos varían más; PC2 es la segunda dirección, perpendicular a PC1.")
 
-    interactive_header("Mini-casos PCA/SVD de los notebooks")
+    interactive_header("Mini-casos PCA/SVD")
     st.markdown(
-        "Estos casos replican la idea de los notebooks: columnas fuertemente dependientes producen pocos valores singulares dominantes. "
+        "Estos casos muestran una idea central: columnas fuertemente dependientes producen pocos valores singulares dominantes. "
         "La escala de los autovalores cambia si divides por $N$ o por $N-1$, pero las direcciones principales no."
     )
     col1, col2 = lab_columns()
@@ -3132,7 +3127,6 @@ def sec_concentration():
         "13. Desigualdades de Concentración",
         "Cotas sobre cuánto se aleja una VA de su media, sin conocer la distribución exacta."
     )
-    source_note("Clase7.pdf, págs. 14-30: Markov, Chebyshev, Hoeffding y garantías para error empírico.")
     beginner_bridge(
         "qué es una cota",
         [
@@ -3281,7 +3275,7 @@ def sec_concentration():
     )
     interactive_guide(
         controls=[
-            ("Fuente", "elige la distribución real desde la que se simulan los datos."),
+            ("Distribución generadora", "elige la distribución real desde la que se simulan los datos."),
             ("tamaño de cada muestra n", "tamaño de cada muestra usada para formar el promedio."),
             ("error que quieres vigilar ε", "umbral de desviación respecto de la media."),
             ("Repeticiones Monte Carlo", "número de muestras independientes usadas para estimar la probabilidad real."),
@@ -3296,7 +3290,7 @@ def sec_concentration():
     )
     col1, col2 = st.columns([1, 2])
     with col1:
-        source = st.radio("Fuente", ["Bernoulli(0.3)", "Uniforme(0,1)"], key="conc_src")
+        source = st.radio("Distribución generadora", ["Bernoulli(0.3)", "Uniforme(0,1)"], key="conc_src")
         n_emp = st.slider("tamaño de cada muestra n", 5, 500, 60, key="conc_nemp")
         eps_emp = st.slider("error que quieres vigilar ε", 0.01, 0.4, 0.10, step=0.01, key="conc_epsemp")
         reps = st.slider("Repeticiones Monte Carlo", 500, 20000, 5000, step=500, key="conc_reps")
@@ -3364,7 +3358,6 @@ def sec_samples_pooled():
         "14. Muestras y Testeo Agrupado (pooled testing)",
         "Estimadores a partir de n observaciones + un caso clásico donde azar + agrupamiento baja costos."
     )
-    source_note("Clase7.pdf, págs. 48-54: muestras, media/varianza muestral y testeo agrupado.")
     beginner_bridge(
         "qué se estima con una muestra",
         [
@@ -3529,7 +3522,6 @@ def sec_limits():
         "15. Leyes Límite: LLN, Kolmogorov, CLT, CLT Multivariado",
         "Los dos teoremas que explican por qué funcionan los promedios — y por qué la normal aparece por todos lados."
     )
-    source_note("Clase7.pdf, págs. 31-47: LLN débil/fuerte, desigualdad de Kolmogorov, CLT y CLT multivariado.")
     beginner_bridge(
         "promedios y campanas",
         [
@@ -3615,7 +3607,7 @@ def sec_limits():
             "LLN habla de consistencia del promedio: con muchas muestras, $\\bar X_n$ se acerca a $\\mu$.",
             "CLT habla de la forma de las fluctuaciones alrededor de $\\mu$: tras escalar por $\\sqrt n$, esas fluctuaciones se vuelven aproximadamente gaussianas.",
             "LLN no dice a qué velocidad ocurre la convergencia; CLT sí cuantifica la escala típica del error mediante $\\sigma/\\sqrt n$.",
-            "CLT no exige normalidad de la fuente, pero sí independencia (o condiciones similares) y varianza finita."
+            "CLT no exige normalidad de la distribución original, pero sí independencia (o condiciones similares) y varianza finita."
         ],
     )
 
@@ -3659,7 +3651,7 @@ def sec_limits():
     interactive_header("LLN y CLT en acción")
     lab_task(
         predict="al aumentar n, las trayectorias del promedio deberían acercarse a la media y el histograma estandarizado a N(0,1).",
-        manipulate="cambia distribución fuente, n y número de repeticiones.",
+        manipulate="cambia distribución generadora, n y número de repeticiones.",
         verify="mira por separado estabilidad del promedio (LLN) y forma del error estandarizado (CLT).",
     )
     tabs = st.tabs(["LLN (trayectorias)", "CLT (histograma de promedios)"])
@@ -3667,7 +3659,7 @@ def sec_limits():
     with tabs[0]:
         col1, col2 = st.columns([1, 2])
         with col1:
-            dist_name = st.radio("Distribución fuente", ["Bernoulli(0.3)", "Exponencial(1)", "Uniforme(0,1)"], key="lln_dist")
+            dist_name = st.radio("Distribución generadora", ["Bernoulli(0.3)", "Exponencial(1)", "Uniforme(0,1)"], key="lln_dist")
             n_paths = st.slider("# trayectorias", 3, 30, 8, key="lln_paths")
             nmax = st.slider("n máximo", 100, 5000, 2000, key="lln_nmax")
         if dist_name.startswith("Bernoulli"):
@@ -3689,7 +3681,7 @@ def sec_limits():
     with tabs[1]:
         col1, col2 = st.columns([1, 2])
         with col1:
-            dist2 = st.radio("Fuente", ["Exponencial(1)", "Uniforme(0,1)", "Bernoulli(0.5)"], key="clt_dist")
+            dist2 = st.radio("Distribución generadora", ["Exponencial(1)", "Uniforme(0,1)", "Bernoulli(0.5)"], key="clt_dist")
             n_clt = st.slider("n (por promedio)", 2, 500, 30, key="clt_n")
             n_reps = st.slider("# repeticiones", 500, 20000, 5000, step=500, key="clt_reps")
         if dist2.startswith("Exp"):
@@ -3707,12 +3699,12 @@ def sec_limits():
             ax.plot(xs, stats.norm.pdf(xs), color="red", lw=2, label="N(0,1)")
             ax.legend(); ax.set_xlim(-4, 4)
             st.pyplot(fig); plt.close(fig)
-        how_to_read("Aunque la fuente sea sesgada (Exponencial) o discreta (Bernoulli), el histograma del promedio estandarizado se parece a la campana estándar cuando n crece.")
+        how_to_read("Aunque la distribución original sea sesgada (Exponencial) o discreta (Bernoulli), el histograma del promedio estandarizado se parece a la campana estándar cuando n crece.")
 
     interactive_header("Cobertura de intervalos construidos con CLT")
     interactive_guide(
         controls=[
-            ("Fuente para intervalos", "elige la distribución original de donde salen las muestras."),
+            ("Distribución para intervalos", "elige la distribución original de donde salen las muestras."),
             ("n por muestra", "tamaño de cada muestra usada para construir un intervalo."),
             ("Número de intervalos simulados", "cuántos intervalos independientes quieres generar."),
         ],
@@ -3725,7 +3717,7 @@ def sec_limits():
     )
     col1, col2 = st.columns([1, 2])
     with col1:
-        source_ci = st.radio("Fuente para intervalos", ["Exponencial(1)", "Uniforme(0,1)", "Bernoulli(0.5)"], key="clt_ci_src")
+        source_ci = st.radio("Distribución para intervalos", ["Exponencial(1)", "Uniforme(0,1)", "Bernoulli(0.5)"], key="clt_ci_src")
         n_ci = st.slider("tamaño de cada muestra n", 5, 400, 40, key="clt_ci_n")
         n_intervals = st.slider("cantidad de intervalos simulados", 50, 1000, 200, step=50, key="clt_ci_rep")
     rng = np.random.default_rng(77)
@@ -3766,7 +3758,7 @@ def sec_limits():
         ["Normal", "Simétrica", "Tener varianza finita y ser i.i.d."],
         2,
         "Esa es la hipótesis clave; no hace falta normalidad de los $X_i$.",
-        "Justamente lo milagroso del CLT: no pide normalidad de la fuente.",
+        "Justamente lo milagroso del CLT: no pide normalidad de la distribución original.",
         key="lim_q1"
     )
     quiz(
@@ -3797,7 +3789,6 @@ def sec_randomized():
         "16. Algoritmos Aleatorizados",
         "Usar azar no como obstáculo sino como herramienta algorítmica: Quicksort y Quickselect."
     )
-    source_note("Probabilidad y Estadistica.ipynb, celdas 5-15: Quicksort aleatorizado, conteo de comparaciones y mediana aleatorizada.")
     beginner_bridge(
         "por qué un algoritmo usa azar",
         [
@@ -3860,13 +3851,13 @@ def sec_randomized():
         "**Quickselect** sólo recursa en el lado que contiene el $k$. El análisis análogo da $E[\\#\\text{comp}]=O(n)$."
     )
 
-    worked_example("algoritmo de mediana aleatorizada de los insumos")
+    worked_example("algoritmo de mediana aleatorizada")
     st.markdown(
         "El algoritmo de mediana aleatorizada toma una muestra aleatoria de tamaño $\\lceil n^{3/4}\\rceil$, "
         "ordena esa muestra, elige dos pivotes alrededor de su centro y sólo ordena el conjunto candidato "
         "$C=\\{x: d\\le x\\le u\\}$. Si los pivotes dejan fuera a la mediana o $C$ sale demasiado grande, declara fallo."
     )
-    st.caption("Trazabilidad: el notebook usa `random.sample`, es decir, muestra sin reemplazo. Esta implementación usa la misma convención para el laboratorio.")
+    st.caption("En este laboratorio la muestra aleatoria se toma sin reemplazo: un elemento no puede aparecer dos veces dentro de la misma muestra auxiliar.")
     st.latex(r"P(\text{fallo}) \le n^{-1/4}")
 
     def _randomized_median_trial(a, rng):
@@ -4053,7 +4044,6 @@ def sec_gradient_backtracking():
         "17. Descenso de Gradiente, Newton y Backtracking",
         "Cómo el tamaño de paso, la curvatura y el momentum controlan la trayectoria de optimización."
     )
-    source_note("Clase7b.pdf, págs. 38-54, y notebook Semana8.ipynb: Newton, descenso de gradiente, backtracking, momentum y zig-zag.")
     beginner_bridge(
         "qué hace un optimizador",
         [
@@ -4144,15 +4134,15 @@ def sec_gradient_backtracking():
     st.latex(r"f(x,y)=\tfrac12(x^2+b y^2),\qquad \nabla f(x,y)=(x,by)")
     st.markdown(
         "Cuando las curvaturas por eje son muy distintas, un paso fijo puede producir trayectorias en zig-zag. "
-        "El notebook usa $\\gamma=2/(b+1)$ para visualizar ese efecto."
+        "Usaremos $\\gamma=2/(b+1)$ como paso guiado para visualizar ese efecto."
     )
     real_world_case(
         "ajustar dos parámetros de un modelo",
-        "Piensa que `x` e `y` son dos parámetros de un modelo y `f` es la pérdida que queremos bajar. "
-        "El parámetro `b` controla la curvatura en la dirección y: si las curvaturas por eje son muy distintas, el problema queda mal condicionado y el descenso puede oscilar o avanzar lento.",
+        "Piensa que $x$ e $y$ son dos parámetros de un modelo y $f$ es la pérdida que queremos bajar. "
+        "El parámetro $b$ controla la curvatura en la dirección y: si las curvaturas por eje son muy distintas, el problema queda mal condicionado y el descenso puede oscilar o avanzar lento.",
         controls=[
             ("curvatura del valle b", "curvatura relativa en la dirección y."),
-            ("tamaño de paso gamma", "cuánto avanzamos contra el gradiente."),
+            ("tamaño de paso γ", "cuánto avanzamos contra el gradiente."),
             ("iteraciones", "cuántas actualizaciones hacemos."),
         ],
         takeaway="Un paso grande puede parecer eficiente, pero si la geometría es estrecha puede producir zig-zag o inestabilidad.",
@@ -4161,8 +4151,8 @@ def sec_gradient_backtracking():
     col1, col2 = lab_columns()
     with col1:
         b_gd = st.slider("curvatura del valle b", 0.02, 2.0, 0.05, step=0.01, key="gd_b")
-        gamma_mode = st.radio("tamaño de paso gamma", ["2/(b+1)", "manual"], horizontal=True, key="gd_mode")
-        gamma_gd = 2 / (b_gd + 1) if gamma_mode.startswith("2/") else st.slider("tamaño de paso gamma", 0.01, 2.5, 0.3, key="gd_gamma")
+        gamma_mode = st.radio("tamaño de paso γ", ["2/(b+1)", "manual"], horizontal=True, key="gd_mode")
+        gamma_gd = 2 / (b_gd + 1) if gamma_mode.startswith("2/") else st.slider("tamaño de paso γ", 0.01, 2.5, 0.3, key="gd_gamma")
         n_iter_gd = st.slider("iteraciones", 5, 80, 30, key="gd_iters")
     x = np.array([2.0, 1.5])
     path = [x.copy()]
@@ -4175,7 +4165,7 @@ def sec_gradient_backtracking():
         f_final_gd = 0.5 * (path[-1,0]**2 + b_gd * path[-1,1]**2)
         grad_final_gd = np.linalg.norm([path[-1, 0], b_gd * path[-1, 1]])
         metric_grid([
-            ("tamaño de paso gamma", f"{gamma_gd:.3f}"),
+            ("tamaño de paso γ", f"{gamma_gd:.3f}"),
             ("pérdida final f", f"{f_final_gd:.4f}"),
             ("tamaño del gradiente final", f"{grad_final_gd:.4f}"),
         ], columns=3)
@@ -4195,8 +4185,8 @@ def sec_gradient_backtracking():
 
     interactive_header("Backtracking line search")
     lab_task(
-        predict="si alpha exige demasiada mejora o beta achica muy agresivamente, los pasos aceptados cambiarán.",
-        manipulate="mueve alpha, beta e iteraciones.",
+        predict="si α exige demasiada mejora o β achica muy agresivamente, los pasos aceptados cambiarán.",
+        manipulate="mueve α, β e iteraciones.",
         verify="mira la trayectoria y la gráfica de pasos aceptados.",
     )
     st.markdown(
@@ -4217,7 +4207,7 @@ def sec_gradient_backtracking():
         steps=[
             "Proponemos un paso grande.",
             "Calculamos si la pérdida baja lo suficiente.",
-            "Si no baja lo suficiente, multiplicamos el paso por beta y probamos de nuevo.",
+            "Si no baja lo suficiente, multiplicamos el paso por β y probamos de nuevo.",
             "Aceptamos el primer paso que cumple la condición.",
         ],
         expanded=True,
@@ -4267,7 +4257,7 @@ def sec_gradient_backtracking():
         axes[1].plot(bt_steps, "o-", color="#4C72B0")
         axes[1].set_title("pasos aceptados")
         axes[1].set_xlabel("iteración")
-        axes[1].set_ylabel("gamma")
+        axes[1].set_ylabel("γ")
         axes[1].set_ylim(0, max(bt_steps) * 1.15 if bt_steps else 1)
         plt.tight_layout()
         st.pyplot(fig); plt.close(fig)
@@ -4275,18 +4265,18 @@ def sec_gradient_backtracking():
             compact_dataframe(pd.DataFrame({
                 "iteración": np.arange(len(bt_values)),
                 "f(x)": [f"{v:.3e}" for v in bt_values],
-                "gamma aceptado": ["-"] + [f"{s:.3f}" for s in bt_steps],
+                "γ aceptado": ["-"] + [f"{s:.3f}" for s in bt_steps],
             }).tail(8))
     how_to_read(
         "La figura izquierda muestra cómo se mueve el punto hacia el mínimo. La derecha no muestra la pérdida, sino el tamaño de paso aceptado por Armijo. "
-        "Si `f final` aparece muy pequeño, no significa error: significa que el algoritmo llegó muy cerca del mínimo; por eso se muestra en notación científica."
+        "Si la pérdida final aparece muy pequeña, no significa error: significa que el algoritmo llegó muy cerca del mínimo; por eso se muestra en notación científica."
     )
     lab_note("en 'pasos aceptados', el eje vertical no es precisión ni pérdida: es el tamaño de paso elegido en cada iteración.")
 
     interactive_header("Descenso de gradiente vs Newton vs Momentum")
     lab_task(
         predict="Newton debería resolver la cuadrática en un paso; momentum debería reducir oscilaciones en casos mal condicionados.",
-        manipulate="cambia b, algoritmo, paso gamma y beta.",
+        manipulate="cambia b, algoritmo, paso γ y momentum β.",
         verify="compara trayectoria y pérdida en escala logarítmica.",
     )
     interactive_guide(
@@ -4390,11 +4380,10 @@ def sec_mom():
         "18. Método de los Momentos (MoM)",
         "El enfoque más intuitivo para aprender parámetros de una distribución: igualar momentos muestrales con teóricos."
     )
-    source_note("Clase7.pdf, págs. 55-59: estimación de parámetros y Método de los Momentos.")
     beginner_bridge(
         "estimar un parámetro",
         [
-            "Un parámetro es un número desconocido que controla una distribución, como lambda en Poisson o mu en Normal.",
+            "Un parámetro es un número desconocido que controla una distribución, como la tasa $\\lambda$ en Poisson o la media $\\mu$ en Normal.",
             "MoM iguala resúmenes observados de los datos con resúmenes teóricos de la distribución.",
             "Funciona bien sólo cuando esos momentos realmente identifican el parámetro y existen las condiciones de convergencia.",
         ],
@@ -4633,7 +4622,6 @@ def sec_calculo():
         "19. Cálculo Diferencial para IA",
         "Derivadas, gradiente, Hessiana y Jacobiana: las herramientas que hacen posible el aprendizaje."
     )
-    source_note("Clase7b.pdf, págs. 4-26: cálculo en una variable, Taylor, gradiente, Hessiana, Jacobiana y regla de la cadena.")
     beginner_bridge(
         "derivadas sin notación",
         [
@@ -4866,7 +4854,6 @@ def sec_convexidad():
         "20. Convexidad",
         "La propiedad que convierte un problema de optimización difícil en uno garantizado."
     )
-    source_note("Clase7b.pdf, págs. 27-37: conjuntos convexos, funciones convexas, condiciones de primer/segundo orden y ejemplos.")
     beginner_bridge(
         "convexidad en una frase",
         [
@@ -5053,11 +5040,10 @@ def sec_levenberg():
         "21. Levenberg-Marquardt y Mínimos Cuadrados No Lineales",
         "El algoritmo que interpola entre descenso de gradiente y Newton para ajustar modelos complejos."
     )
-    source_note("Clase7b.pdf, págs. 55-58: mínimos cuadrados lineales/no lineales y Levenberg-Marquardt. La app usa la forma estándar estable con +lambda I.")
     beginner_bridge(
         "ajustar una curva",
         [
-            "Un residuo es dato observado menos predicción: r = y - y_hat.",
+            "Un residuo es dato observado menos predicción: $r = y - \\hat y$.",
             "Mínimos cuadrados busca parámetros que hagan pequeños esos residuos.",
             "LM resuelve un sistema lineal en cada iteración; la computadora calcula el paso, no invertimos matrices a mano.",
         ],
@@ -5103,7 +5089,7 @@ def sec_levenberg():
         r"\text{Levenberg-Marquardt:}\quad (J^\top J + \lambda I)\,\Delta\theta = J^\top(y - \hat y(\theta))",
     ])
     formula_walkthrough(
-        "Por qué funciona la suma $J^\\top J + \\lambda I$",
+        "Por qué funciona la regularización de LM",
         terms={
             r"J^\top J": "Aproximación de la Hessiana de $E$ (asume residuos pequeños).",
             r"\lambda I": "Regularización que garantiza que la matriz sea invertible y controla el tamaño del paso.",
@@ -5121,8 +5107,8 @@ def sec_levenberg():
     interactive_header("Ajuste de modelo no lineal por LM")
     lab_task(
         predict="con poco ruido y suficientes iteraciones, el ajuste naranja debería acercarse a la curva verde.",
-        manipulate="cambia modelo, ruido, lambda inicial e iteraciones.",
-        verify="compara curva inicial, curva ajustada, pérdida y lambda final.",
+        manipulate="cambia modelo, ruido, regularización inicial e iteraciones.",
+        verify="compara curva inicial, curva ajustada, pérdida y regularización final.",
     )
     interactive_guide(
         controls=[
