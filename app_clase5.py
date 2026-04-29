@@ -312,6 +312,33 @@ def learning_goal(text):
 def lab_note(text):
     st.caption(f"Lectura rápida: {text}")
 
+def source_note(text):
+    st.caption(f"Fuente base: {text}")
+
+def beginner_bridge(title, bullets):
+    with st.expander(f"Si no sabes nada: {title}", expanded=True):
+        for bullet in bullets:
+            st.markdown(f"- {bullet}")
+
+def lab_task(predict=None, manipulate=None, verify=None):
+    pieces = []
+    if predict:
+        pieces.append(f"**Predice:** {predict}")
+    if manipulate:
+        pieces.append(f"**Manipula:** {manipulate}")
+    if verify:
+        pieces.append(f"**Verifica:** {verify}")
+    if pieces:
+        st.info("\n\n".join(pieces))
+
+def minimum_takeaway(learned, use_when, do_not_conclude):
+    with st.expander("Conclusión mínima", expanded=True):
+        st.markdown(
+            f"- **Qué aprendí:** {learned}\n"
+            f"- **Cuándo lo uso:** {use_when}\n"
+            f"- **Qué no debo concluir:** {do_not_conclude}"
+        )
+
 def latex_aligned(lines):
     body = r"\\".join(lines)
     st.latex(rf"\begin{{aligned}}{body}\end{{aligned}}")
@@ -435,11 +462,19 @@ st.pyplot = _styled_pyplot
 
 def quiz(question, options, correct_idx, feedback_ok, feedback_wrong, key):
     st.markdown(f"**{question}**")
-    ans = st.radio("Opciones", options, key=key, index=None, label_visibility="collapsed")
+    has_math_options = any("$" in str(opt) or "\\" in str(opt) for opt in options)
+    if has_math_options:
+        letters = [chr(ord("A") + i) for i in range(len(options))]
+        for letter, option in zip(letters, options):
+            st.markdown(f"**{letter}.** {option}")
+        ans = st.radio("Opciones", letters, key=key, index=None, horizontal=True, label_visibility="collapsed")
+    else:
+        ans = st.radio("Opciones", options, key=key, index=None, label_visibility="collapsed")
     if ans is None:
         st.caption("_Selecciona una opción para ver el feedback._")
         return
-    if options.index(ans) == correct_idx:
+    selected_idx = letters.index(ans) if has_math_options else options.index(ans)
+    if selected_idx == correct_idx:
         st.success(f"Correcto. {feedback_ok}")
     else:
         st.error(f"No es esa. {feedback_wrong}")
@@ -1958,7 +1993,7 @@ def sec_distribuciones():
     ], expanded=False)
 
     tabs = st.tabs([
-        "Discretas", "Continuas", "Aproximaciones", "Memoryless (Exp)", "Explorador interactivo"
+        "Discretas", "Continuas", "Aproximaciones", "Falta de memoria (Exp)", "Explorador interactivo"
     ])
 
     with tabs[0]:
@@ -2522,6 +2557,15 @@ def sec_fgm_cov():
         "10. Función Generadora de Momentos, Covarianza y Correlación",
         "Herramientas para comparar distribuciones (FGM) y cuantificar relaciones lineales entre variables."
     )
+    source_note("Clase7.pdf, págs. 4-13: dependencia multivariada, covarianza/correlación y FGM.")
+    beginner_bridge(
+        "qué problema resuelve esta sección",
+        [
+            "Una variable aleatoria es una columna de datos incierta: por ejemplo ventas, errores o tiempos de espera.",
+            "Un momento es un resumen numérico de esa variable: media, varianza u otros promedios de potencias.",
+            "La correlación sólo mira relaciones tipo recta; una relación curva puede ser fuerte aunque la correlación sea cero.",
+        ],
+    )
     motivation(
         "La **FGM** empaqueta *todos* los momentos ($E[X], E[X^2], ...$) en una sola función: si la FGM existe "
         "en un entorno de 0 y dos VAs tienen la misma FGM en ese entorno, entonces son iguales en distribución. Útil para probar propiedades de sumas. "
@@ -2539,6 +2583,7 @@ def sec_fgm_cov():
         "te devuelve promedios de potencias como $E[X]$, $E[X^2]$ y así sucesivamente. No hace falta memorizarla como truco; "
         "su valor es que empaqueta muchos resúmenes de la distribución en una sola función."
     )
+    st.caption("Pregunta que responde la fórmula: ¿cómo recupero media, varianza y otros momentos desde una sola función?")
     latex_aligned([
         r"M_X(t) = E[e^{tX}] = 1 + tE[X] + \tfrac{t^2}{2!}E[X^2] + \tfrac{t^3}{3!}E[X^3] + \ldots",
         r"M_X^{(k)}(0) = E[X^k]",
@@ -2579,7 +2624,72 @@ def sec_fgm_cov():
     worked_example("Cov(X, X+Y) con X, Y independientes de varianza 1")
     st.latex(r"\text{Cov}(X, X+Y) = \text{Cov}(X,X) + \text{Cov}(X,Y) = \text{Var}(X) + 0 = 1")
 
+    worked_example("Covarianza cero no implica independencia: X uniforme en {-1, 0, 1}, Y = X²")
+    st.markdown(
+        "Sea $X \\sim \\text{Uniforme}\\{-1, 0, 1\\}$ (cada valor con probabilidad $1/3$) y $Y = X^2$. "
+        "Claramente $Y$ depende de $X$ (la función es determinista), pero calculemos la covarianza:"
+    )
+    latex_aligned([
+        r"E[X] = \tfrac{1}{3}(-1 + 0 + 1) = 0",
+        r"E[Y] = E[X^2] = \tfrac{1}{3}(1 + 0 + 1) = \tfrac{2}{3}",
+        r"E[XY] = E[X^3] = \tfrac{1}{3}((-1)^3 + 0^3 + 1^3) = 0",
+        r"\text{Cov}(X,Y) = E[XY] - E[X]E[Y] = 0 - 0 \cdot \tfrac{2}{3} = 0",
+    ])
+    st.error(
+        "**Conclusión:** $X$ e $Y$ están perfectamente relacionadas ($Y=X^2$), pero su covarianza y su correlación "
+        "de Pearson son ambas cero. La relación es cuadrática — simétrica respecto al origen — y eso cancela "
+        "cualquier señal lineal."
+    )
+    insight(
+        "La correlación de Pearson $\\rho$ solo detecta relaciones que se pueden trazar con una recta. "
+        "Cualquier relación simétrica o curvada puede tener $\\rho \\approx 0$ y aún así existir una dependencia fuerte."
+    )
+
+    with advanced_expander("Derivación de FGM para distribuciones clave"):
+        st.markdown(
+            "La FGM permite calcular momentos derivando en cero, y además actúa como 'huella dactilar': "
+            "dos variables con la misma FGM en un entorno de cero tienen la misma distribución."
+        )
+        tabs_fgm = st.tabs(["Poisson", "Normal estándar", "Exponencial"])
+        with tabs_fgm[0]:
+            st.markdown("**$X \\sim \\text{Poisson}(\\lambda)$**, con $P(X=k) = \\lambda^k e^{-\\lambda}/k!$")
+            latex_aligned([
+                r"M(t) = E[e^{tX}] = \sum_{k=0}^\infty e^{tk}\frac{\lambda^k e^{-\lambda}}{k!}",
+                r"= e^{-\lambda}\sum_{k=0}^\infty \frac{(e^t \lambda)^k}{k!} = e^{-\lambda} e^{\lambda e^t}",
+                r"= e^{\lambda(e^t - 1)}",
+            ])
+            st.markdown("**Verificación de momentos por derivación:**")
+            latex_aligned([
+                r"M'(t) = e^{\lambda(e^t-1)}\lambda e^t \Rightarrow M'(0) = \lambda = E[X]",
+                r"M''(0) = \lambda^2 + \lambda \Rightarrow \text{Var}(X) = \lambda^2+\lambda-\lambda^2 = \lambda",
+            ])
+        with tabs_fgm[1]:
+            st.markdown("**$X \\sim \\mathcal{N}(0,1)$**, con $f(x) = \\frac{1}{\\sqrt{2\\pi}}e^{-x^2/2}$")
+            latex_aligned([
+                r"M(t) = \frac{1}{\sqrt{2\pi}}\int_{-\infty}^{\infty} e^{tx} e^{-x^2/2}\,dx",
+                r"= \frac{1}{\sqrt{2\pi}}\int_{-\infty}^{\infty} e^{-\frac{1}{2}(x-t)^2 + \frac{t^2}{2}}\,dx",
+                r"= e^{t^2/2}",
+            ])
+            st.caption("La integral se completa el cuadrado en el exponente; la integral resultante es la integral total de una gaussiana, que vale 1.")
+            st.markdown("Los momentos impares son 0 (simetría); $E[X^2] = M''(0) = 1 = \\text{Var}(X)$.")
+        with tabs_fgm[2]:
+            st.markdown("**$X \\sim \\text{Exp}(\\lambda)$**, con $f(x) = \\lambda e^{-\\lambda x}$ para $x\\ge 0$")
+            latex_aligned([
+                r"M(s) = \int_0^\infty e^{sx} \lambda e^{-\lambda x}\,dx = \lambda \int_0^\infty e^{-(\lambda - s)x}\,dx",
+                r"= \frac{\lambda}{\lambda - s}, \quad s < \lambda",
+            ])
+            st.markdown("**Momentos:**")
+            latex_aligned([
+                r"M'(s) = \frac{\lambda}{(\lambda-s)^2} \Rightarrow E[X] = M'(0) = \frac{1}{\lambda}",
+                r"M''(s) = \frac{2\lambda}{(\lambda-s)^3} \Rightarrow E[X^2] = \frac{2}{\lambda^2} \Rightarrow \text{Var}(X) = \frac{1}{\lambda^2}",
+            ])
+
     interactive_header("Dependencia lineal y no lineal")
+    lab_task(
+        predict="antes de mover rho, decide si esperas una nube inclinada hacia arriba, hacia abajo o sin inclinación.",
+        manipulate="cambia rho, el patrón no lineal y el ruido.",
+        verify="compara lo que ves en la nube con la covarianza/correlación que muestra el título.",
+    )
     real_world_case(
         "relaciones entre variables de negocio",
         "Piensa en dos columnas de datos: edad y gasto mensual, temperatura y demanda eléctrica, o visitas y compras. "
@@ -2660,8 +2770,13 @@ def sec_fgm_cov():
     )
     ai_bridge(
         "La **matriz de covarianza** $\\Sigma$ es la base de PCA (siguiente sección), whitening y la "
-        "Gaussiana multivariada. En deep learning, **batch normalization** puede verse como un whitening "
-        "aproximado: restar media y dividir por desv. std."
+        "Gaussiana multivariada. En deep learning, **batch normalization** normaliza activaciones por media "
+        "y desviación estándar de mini-batch; no elimina covarianzas completas como un whitening estricto."
+    )
+    minimum_takeaway(
+        "La FGM resume momentos; la covarianza/correlación resumen dependencia lineal.",
+        "Cuando necesito calcular momentos o detectar relaciones lineales entre variables.",
+        "No debo concluir independencia sólo porque la correlación sea cero, salvo bajo supuestos especiales como gaussianidad conjunta.",
     )
 
 # ==================================================================
@@ -2671,6 +2786,15 @@ def sec_pca():
     section_title(
         "11. Gaussiana Multivariada y PCA vía SVD",
         "De una variable a muchas correlacionadas: la geometría de elipses y cómo encontrar sus ejes principales."
+    )
+    source_note("Clase7.pdf, págs. 4-7, y Probabilidad y Estadistica.ipynb, celdas 16-26: normal bivariada, covarianza, SVD/PCA y toy problem.")
+    beginner_bridge(
+        "cómo leer PCA sin álgebra avanzada",
+        [
+            "Una nube de puntos puede estar más estirada en una dirección que en otra.",
+            "PCA gira los ejes para mirar la nube desde la dirección donde se ve más estirada.",
+            "Autovector significa dirección principal; autovalor significa cuánta variación hay en esa dirección.",
+        ],
     )
     motivation(
         "Cuando trabajas con datos vectoriales, las features suelen estar correlacionadas. La Gaussiana "
@@ -2689,6 +2813,7 @@ def sec_pca():
         "Una gaussiana multivariada describe datos con varias columnas a la vez. No sólo pregunta si cada columna varía mucho; "
         "también pregunta si dos columnas tienden a moverse juntas. La matriz de covarianza $\\Sigma$ guarda esas escalas y relaciones."
     )
+    st.caption("Pregunta que responde la fórmula: ¿qué tan lejos está un punto del centro si las variables tienen escalas y correlaciones distintas?")
     st.latex(r"D^2(\mathbf x,\boldsymbol\mu)=(\mathbf x-\boldsymbol\mu)^T\Sigma^{-1}(\mathbf x-\boldsymbol\mu)")
     st.caption("Esta es la distancia de Mahalanobis: mide distancia al centro considerando escala y correlaciones.")
     st.latex(r"f_{\mathbf X}(\mathbf x) = \frac{1}{(2\pi)^{d/2}|\Sigma|^{1/2}} \exp\!\left(-\tfrac{1}{2}D^2(\mathbf x,\boldsymbol\mu)\right)")
@@ -2717,9 +2842,14 @@ def sec_pca():
     )
 
     interactive_header("Gaussiana bivariada — heatmap con covarianza ajustable")
+    lab_task(
+        predict="si rho se acerca a 1 o -1, la elipse debería inclinarse y alargarse.",
+        manipulate="cambia las desviaciones marginales y rho.",
+        verify="mira si las flechas rojas (ejes principales) coinciden con la orientación de la elipse.",
+    )
     interactive_guide(
         controls=[
-            ("dispersión eje 1 σ₁ y eje 2 σ₂", "controlan qué tan ancha es la nube en cada dirección principal."),
+            ("dispersión marginal σ₁ y σ₂", "controlan la escala de las coordenadas X e Y antes de rotar la elipse por correlación."),
             ("correlación ρ", "controla la inclinación y la correlación lineal entre ambas variables."),
         ],
         procedure=(
@@ -2731,8 +2861,8 @@ def sec_pca():
     )
     col1, col2 = st.columns([1, 2])
     with col1:
-        s1 = st.slider("dispersión eje 1 σ₁", 0.3, 3.0, 1.0, key="pca_s1")
-        s2 = st.slider("dispersión eje 2 σ₂", 0.3, 3.0, 1.5, key="pca_s2")
+        s1 = st.slider("dispersión marginal σ₁ (coordenada X)", 0.3, 3.0, 1.0, key="pca_s1")
+        s2 = st.slider("dispersión marginal σ₂ (coordenada Y)", 0.3, 3.0, 1.5, key="pca_s2")
         rho = st.slider("correlación ρ", -0.95, 0.95, 0.6, key="pca_rho")
     Sigma = np.array([[s1**2, rho*s1*s2], [rho*s1*s2, s2**2]])
     xs = np.linspace(-4, 4, 200); ys = np.linspace(-4, 4, 200)
@@ -2752,9 +2882,10 @@ def sec_pca():
         fig.colorbar(cf, ax=ax, shrink=0.82, label="densidad")
         st.pyplot(fig); plt.close(fig)
     how_to_read("Las flechas rojas son los **autovectores** de Σ (ejes de la elipse), con longitudes proporcionales a $\\sqrt{\\lambda_i}$.")
-    st.caption(f"Σ={np.round(Sigma,2).tolist()}, autovalores={np.round(eigvals,2).tolist()}. Una elipse más alargada significa más variabilidad en esa dirección.")
+    st.caption(f"Σ={np.round(Sigma,2).tolist()}, autovalores={np.round(eigvals,2).tolist()}. σ₁ y σ₂ son dispersiones marginales; los ejes principales reales son las flechas rojas.")
 
     st.markdown("### PCA vía SVD")
+    st.caption("Cruce con notebook: este bloque corresponde al pipeline centrar datos → covarianza/SVD → direcciones principales → varianza explicada.")
     st.markdown(
         "Dado un dataset $X \\in \\mathbb{R}^{N\\times d}$ **centrado**, computamos SVD:"
     )
@@ -3001,10 +3132,21 @@ def sec_concentration():
         "13. Desigualdades de Concentración",
         "Cotas sobre cuánto se aleja una VA de su media, sin conocer la distribución exacta."
     )
+    source_note("Clase7.pdf, págs. 14-30: Markov, Chebyshev, Hoeffding y garantías para error empírico.")
+    beginner_bridge(
+        "qué es una cota",
+        [
+            "Una cota no dice la probabilidad exacta; dice un máximo garantizado.",
+            "Más hipótesis permiten cotas más fuertes: no negatividad, varianza conocida o datos acotados.",
+            "En aprendizaje automático esto sirve para comparar error observado con error esperado en datos nuevos.",
+        ],
+    )
     motivation(
-        "No siempre podemos calcular $P(|X-\\mu|>\\epsilon)$ directamente — la distribución puede ser compleja. "
-        "**Markov, Chebyshev y Hoeffding** dan cotas universales crecientemente más finas. Son la base de "
-        "la teoría de generalización en ML y de muchísimos resultados de muestreo."
+        "El problema fundamental del Machine Learning: entrenamos modelos con una muestra finita de $n$ datos "
+        "y calculamos el **error empírico** ($\\bar X_n$). Pero lo que importa es el **error real** ($\\mu$) sobre "
+        "datos futuros invisibles. ¿Cómo garantizamos matemáticamente que $\\bar X_n \\approx \\mu$? "
+        "**Markov, Chebyshev y Hoeffding** dan cotas superiores bajo supuestos explícitos: no negatividad, varianza finita "
+        "o variables acotadas e i.i.d. Son la base de la teoría de generalización en ML."
     )
     prerequisites_box(
         "- $E[X]$, $\\text{Var}(X)$.\n"
@@ -3020,10 +3162,42 @@ def sec_concentration():
     ], expanded=True)
     st.markdown("**Markov** (para $X\\ge 0$):")
     st.latex(r"P(X \geq a) \leq \frac{E[X]}{a}")
+    with advanced_expander("Demostración de la desigualdad de Markov"):
+        st.markdown(
+            "Para $X$ continua con $X \\geq 0$, particionamos la integral de $E[X]$ en dos tramos:"
+        )
+        latex_aligned([
+            r"E[X] = \int_0^\infty x\,f(x)\,dx = \int_0^a x\,f(x)\,dx + \int_a^\infty x\,f(x)\,dx",
+            r"\geq \int_a^\infty x\,f(x)\,dx \geq a\int_a^\infty f(x)\,dx = a\,P(X \geq a)",
+        ])
+        st.markdown(
+            "**¿Por qué $x\\,f(x) \\geq a\\,f(x)$ en $[a,\\infty)$?** "
+            "En ese tramo, cada $x$ satisface $x \\geq a$, entonces $x \\cdot f(x) \\geq a \\cdot f(x)$ "
+            "(como $f(x)\\geq 0$, multiplicar por algo más grande no cambia el signo). "
+            "El primer paso (descartar $[0,a]$) hace la cota laxa: hay mucho margen."
+        )
+        st.markdown(
+            "Dividiendo por $a > 0$ obtenemos $P(X \\geq a) \\leq E[X]/a$."
+        )
+        st.markdown("**Chebyshev como caso especial:** Aplicar Markov a $Y = (X-\\mu)^2 \\geq 0$ con umbral $a = \\epsilon^2$:")
+        latex_aligned([
+            r"P((X-\mu)^2 \geq \epsilon^2) \leq \frac{E[(X-\mu)^2]}{\epsilon^2} = \frac{\sigma^2}{\epsilon^2}",
+            r"\Longrightarrow P(|X-\mu| \geq \epsilon) \leq \frac{\sigma^2}{\epsilon^2}",
+        ])
     st.markdown("**Chebyshev** (a partir de Markov aplicado a $(X-\\mu)^2$):")
     st.latex(r"P(|X-\mu| \geq k\sigma) \leq \frac{1}{k^2}")
     st.markdown("**Hoeffding** (si cada $X_i \\in [a,b]$, i.i.d.):")
     st.latex(r"P\!\left(\big|\bar X_n - \mu\big| \geq t\right) \leq 2\exp\!\left(-\frac{2nt^2}{(b-a)^2}\right)")
+    compact_dataframe(pd.DataFrame([
+        {"Cota": "Markov", "Supuesto mínimo": "X >= 0 y E[X] finita", "Úsala cuando": "sólo conoces el promedio"},
+        {"Cota": "Chebyshev", "Supuesto mínimo": "Var(X) finita", "Úsala cuando": "quieres desviaciones respecto de la media"},
+        {"Cota": "Hoeffding", "Supuesto mínimo": "X_i acotadas e i.i.d.", "Úsala cuando": "promedias variables en un intervalo fijo"},
+    ]))
+    st.markdown(
+        "A diferencia de Markov o Chebyshev (que decaen **polinomialmente** en $n$), Hoeffding garantiza que la "
+        "probabilidad de error decrece **exponencialmente** con $n$. Esta es la base matemática de la teoría **PAC** "
+        "(Probably Approximately Correct) en Machine Learning."
+    )
     formula_walkthrough(
         "Qué garantizan realmente estas desigualdades",
         terms={
@@ -3066,13 +3240,18 @@ def sec_concentration():
     st.markdown("**Coleccionador de cupones.** Si $X$ es el tiempo hasta juntar $n$ cupones, $E[X]=nH_n$.")
     st.latex(r"P(X\ge 2nH_n)\le \frac{E[X]}{2nH_n}=\frac{1}{2}")
     st.markdown("**Suma de dos dados repetida $n$ veces.** Cada lanzamiento doble tiene media $7$ y varianza $35/6$.")
-    st.latex(r"P\left(|S_n-7n|\ge 10\sqrt n\right)\le \frac{(35/6)n}{100n}=\frac{35}{600}\approx0.058")
+    st.latex(r"P\left(|S_n-7n|\ge 10\sqrt{35n/6}\right)\le \frac{(35/6)n}{100(35n/6)}=0.01")
 
     interactive_header("Comparador de cotas")
+    lab_task(
+        predict="si bajas el riesgo δ o el error tolerado ε, deberían subir las muestras necesarias.",
+        manipulate="mueve ε y δ.",
+        verify="compara cuántas muestras pide Hoeffding versus Chebyshev.",
+    )
     col1, col2 = st.columns([1, 2])
     with col1:
-        eps = st.slider("error máximo tolerado ε", 0.01, 0.5, 0.1, step=0.01, key="conc_eps")
-        delta = st.slider("riesgo de equivocarse δ", 0.001, 0.5, 0.05, step=0.001, key="conc_delta")
+        eps = st.slider("error máximo tolerado ε (más bajo = más muestras)", 0.01, 0.5, 0.1, step=0.01, key="conc_eps")
+        delta = st.slider("riesgo permitido δ (más bajo = más muestras)", 0.001, 0.5, 0.05, step=0.001, key="conc_delta")
         n_h = np.ceil(np.log(2/delta) / (2*eps**2))
         var_unit = 0.25
         n_c = np.ceil(var_unit / (eps**2 * delta))
@@ -3095,6 +3274,11 @@ def sec_concentration():
     lab_note("estas curvas son garantías pesimistas: valores más bajos no son más 'verdaderos', sólo cotas superiores más informativas.")
 
     interactive_header("Cotas teóricas versus comportamiento empírico")
+    lab_task(
+        predict="la barra empírica debería quedar debajo de las cotas, pero no necesariamente cerca de ellas.",
+        manipulate="elige distribución, n, ε y repeticiones.",
+        verify="revisa si las cotas actúan como techo y no como predicción exacta.",
+    )
     interactive_guide(
         controls=[
             ("Fuente", "elige la distribución real desde la que se simulan los datos."),
@@ -3180,6 +3364,15 @@ def sec_samples_pooled():
         "14. Muestras y Testeo Agrupado (pooled testing)",
         "Estimadores a partir de n observaciones + un caso clásico donde azar + agrupamiento baja costos."
     )
+    source_note("Clase7.pdf, págs. 48-54: muestras, media/varianza muestral y testeo agrupado.")
+    beginner_bridge(
+        "qué se estima con una muestra",
+        [
+            "La población completa suele ser inaccesible; una muestra es el subconjunto que sí observamos.",
+            "La media muestral estima el promedio real de la población.",
+            "En pooled testing se mezclan muestras biológicas para ahorrar tests cuando los positivos son raros.",
+        ],
+    )
     motivation(
         "En estadística casi siempre trabajamos con **muestras** (subset de una población). Media muestral "
         "y varianza muestral son los estimadores estándar de $\\mu$ y $\\sigma^2$. Como aplicación, el "
@@ -3209,13 +3402,39 @@ def sec_samples_pooled():
         ],
     )
 
-    worked_example("testeo agrupado (pooled testing)")
+    worked_example("testeo agrupado (pooled testing) — conscriptos con enfermedad rara")
     st.markdown(
-        "Tenemos $N=1000$ muestras de sangre; prevalencia $p=0.01$. Dos esquemas:\n\n"
-        "**A. Test individual**: 1000 tests.\n\n"
-        "**B. Agrupar en bloques de $k$**: mezclar $k$ muestras y testar la mezcla. Si negativo → 1 test "
-        "para $k$ personas. Si positivo → $1+k$ tests para ese grupo. Total esperado:"
+        "**Problema:** 1000 conscriptos deben ser testeados para una enfermedad con prevalencia $p = 0.002$ (0.2%). "
+        "Hacer 1000 tests individuales es costoso. "
+        "**Estrategia:** dividir en 10 grupos de 100 personas, mezclar la sangre y testear la mezcla."
     )
+    st.markdown(
+        "- Si la mezcla es **negativa** → las 100 personas están sanas. Usamos **1 test** para ese grupo.\n"
+        "- Si la mezcla es **positiva** → hacemos 100 tests individuales adicionales. Usamos **1+100 = 101 tests**.\n\n"
+        "**¿Cuántos tests esperamos realizar?** Sea $Z_i = 1$ si el grupo $i$ da positivo, 0 si da negativo."
+    )
+    compact_dataframe(pd.DataFrame([
+        {"Escenario en 10 grupos de 100": "Todos los grupos negativos", "Tests totales": 10, "Lectura": "mínimo posible"},
+        {"Escenario en 10 grupos de 100": "Todos los grupos positivos", "Tests totales": 1010, "Lectura": "máximo posible"},
+        {"Escenario en 10 grupos de 100": "Valor esperado con p=0.002", "Tests totales": "se calcula abajo", "Lectura": "promedio teórico"},
+    ]))
+    p_conscript = 0.002
+    k_conscript = 100
+    n_groups = 10
+    p_group_pos = 1 - (1 - p_conscript)**k_conscript
+    ez_conscript = n_groups + k_conscript * n_groups * p_group_pos
+    st.latex(
+        rf"E[Z_i] = P(\text{{grupo positivo}}) = 1-(1-0.002)^{{100}} \approx {p_group_pos:.3f}"
+    )
+    st.latex(
+        rf"E[Z] = 10 + 100 \cdot \sum_{{i=1}}^{{10}} E[Z_i] = 10 + 100 \cdot 10 \cdot {p_group_pos:.3f} \approx {ez_conscript:.0f}"
+    )
+    st.success(
+        f"Pasamos de **1000 tests → ~{ez_conscript:.0f} tests**: una reducción del {100*(1-ez_conscript/1000):.0f}% "
+        f"usando solo probabilidad y agrupamiento."
+    )
+    st.markdown("---")
+    st.markdown("**Fórmula general** (N personas, grupos de tamaño k, prevalencia p):")
     st.latex(r"E[Z] = \frac{N}{k}\Big[1 + k\cdot (1 - (1-p)^k)\Big]")
     st.caption("Esta forma cerrada supone que $N$ es divisible por $k$. En el laboratorio se maneja también el grupo residual si sobra gente.")
     formula_walkthrough(
@@ -3227,21 +3446,21 @@ def sec_samples_pooled():
             r"k(1-(1-p)^k)": "Tests individuales esperados después de una mezcla positiva.",
         },
         steps=[
-            "Primero siempre haces un test por grupo.",
-            "Sólo si el grupo sale positivo haces los k tests individuales.",
-            "Si la prevalencia es baja, muchos grupos salen negativos y ahorras tests.",
+            "Primero siempre haces un test por grupo: 1 test fijo, independiente del resultado.",
+            "Sólo si el grupo sale positivo haces los k tests individuales adicionales.",
+            "Si la prevalencia es baja, muchos grupos salen negativos y ahorras muchos tests.",
             "Si k es demasiado grande, casi todos los grupos salen positivos y pierdes el ahorro.",
         ],
         expanded=False,
     )
     pitfall("El modelo supone independencia, prevalencia homogénea y test perfecto. En aplicaciones reales habría que considerar sensibilidad, especificidad y logística de laboratorio.")
-    st.markdown("Para $N=1000, p=0.01, k=10$:")
-    k0 = 10; p0 = 0.01; N0 = 1000
-    ez = (N0/k0) * (1 + k0*(1 - (1-p0)**k0))
-    st.latex(rf"E[Z] = \tfrac{{1000}}{{10}}[1 + 10(1 - 0.99^{{10}})] \approx {ez:.0f}")
-    st.info(f"Pasamos de **1000 tests → ~{ez:.0f}**. Con el mejor $k$ se puede bajar aún más.")
 
     interactive_header("Pooled testing: óptimo en k")
+    lab_task(
+        predict="para prevalencia baja debería existir un tamaño de grupo k que ahorre muchos tests.",
+        manipulate="cambia p y N.",
+        verify="busca el fondo de la curva en U y compáralo con el costo sin pooling.",
+    )
     st.info("Este modelo asume test perfecto e independencia entre personas. En aplicaciones reales también importan sensibilidad, especificidad, logística y tiempo de procesamiento.")
     interactive_guide(
         controls=[
@@ -3310,6 +3529,15 @@ def sec_limits():
         "15. Leyes Límite: LLN, Kolmogorov, CLT, CLT Multivariado",
         "Los dos teoremas que explican por qué funcionan los promedios — y por qué la normal aparece por todos lados."
     )
+    source_note("Clase7.pdf, págs. 31-47: LLN débil/fuerte, desigualdad de Kolmogorov, CLT y CLT multivariado.")
+    beginner_bridge(
+        "promedios y campanas",
+        [
+            "LLN dice que el promedio de muchas observaciones se estabiliza cerca de la media real.",
+            "CLT dice cómo se distribuye el error de ese promedio cuando n es grande.",
+            "Ambos requieren supuestos; aquí el caso base es muestras i.i.d. con varianza finita para CLT.",
+        ],
+    )
     motivation(
         "**LLN**: el promedio muestral converge a la media poblacional. **CLT**: las fluctuaciones de ese "
         "promedio alrededor de $\\mu$ son *aproximadamente Gaussianas* con varianza $\\sigma^2/n$, "
@@ -3334,11 +3562,35 @@ def sec_limits():
         "Diferencia intuitiva: la débil dice «es improbable estar lejos»; la fuerte dice «la trayectoria "
         "completa converge». La fuerte implica la débil, no al revés."
     )
+    with st.expander("La diferencia en imágenes: Foto vs Película", expanded=True):
+        col_w, col_s = st.columns(2)
+        with col_w:
+            st.markdown("### Ley Débil — La «Foto»")
+            st.markdown(
+                "**Convergencia en probabilidad.** Si tomas una foto del error en un instante $n$ muy grande, "
+                "es casi seguro que estará cerca de $\\mu$. "
+                "Sin embargo, *permite* que si sigues observando hasta el infinito, "
+                "la trayectoria ocasionalmente dé «saltos» y se aleje de $\\mu$. "
+                "La foto está bien; la película podría tener sorpresas."
+            )
+            st.info("**Uso teórico:** Sirve para demostrar que un estimador estadístico es *consistente*.")
+        with col_s:
+            st.markdown("### Ley Fuerte — La «Película»")
+            st.markdown(
+                "**Convergencia casi segura.** Con probabilidad 1, para todo margen $\\epsilon>0$ existe un momento "
+                "$N(\\omega)$ desde el cual $\\bar X_n$ queda dentro de la banda $\\mu\\pm\\epsilon$. "
+                "Puede fluctuar antes de ese punto; lo fuerte es el control eventual de la trayectoria completa."
+            )
+            st.success("**Uso en IA:** Justifica estimadores empíricos bajo supuestos i.i.d.; no garantiza por sí sola estabilidad de entrenamiento.")
+    insight(
+        "La Ley Fuerte es la pieza que faltaba: la Desigualdad de Kolmogorov (abajo) acota el *máximo* de las "
+        "sumas parciales, lo que permite pasar de la convergencia en un punto (Débil) a la convergencia de toda la trayectoria (Fuerte)."
+    )
     st.markdown("**Desigualdad de Kolmogorov** (máxima de sumas parciales):")
     st.latex(r"P\!\left(\max_{1\leq k\leq n} |S_k - k\mu| \geq \epsilon\right) \leq \frac{\text{Var}(S_n)}{\epsilon^2}")
     st.caption(
-        "Hipótesis: sumas parciales de variables independientes con varianza finita; equivalentemente, "
-        "aplicar la desigualdad a la forma centrada $S_k-k\\mu$."
+        "A diferencia de Chebyshev —que acota el *último punto* de la trayectoria— Kolmogorov acota la probabilidad "
+        "de que *cualquier punto* de la trayectoria (del paso 1 al $n$) haya superado el umbral."
     )
 
     st.markdown("### Teorema Central del Límite (CLT)")
@@ -3367,7 +3619,32 @@ def sec_limits():
         ],
     )
 
-    worked_example("Chebyshev vs CLT para dimensionar muestras")
+    worked_example("El encuestador: ¿cuántos votos necesito encuestar?")
+    st.markdown(
+        "Queremos estimar la fracción $p$ de votos en un referéndum con error $\\epsilon=0.01$ y 95% de confianza. "
+        "En el peor caso (empate perfecto) $\\sigma^2 = p(1-p) \\leq 0.25$."
+    )
+    col_enc_a, col_enc_b, col_enc_c = st.columns(3)
+    with col_enc_a:
+        st.markdown("**Vía Chebyshev** *(garantía exacta)*")
+        st.latex(r"\frac{\sigma^2}{n\epsilon^2} \leq 0.05 \Rightarrow n \geq \frac{0.25}{(0.01)^2 \cdot 0.05} = 50{,}000")
+        st.caption("Garantía matemática absoluta. Prepara para el peor escenario.")
+    with col_enc_b:
+        st.markdown("**Vía Hoeffding** *(garantía + acotado)*")
+        n_hoef = int(np.ceil(np.log(2/0.05) / (2 * 0.01**2)))
+        st.latex(rf"2e^{{-2n(0.01)^2}} \leq 0.05 \Rightarrow n \geq {n_hoef:,}")
+        st.caption("Más eficiente que Chebyshev por el decaimiento exponencial.")
+    with col_enc_c:
+        st.markdown("**Vía CLT** *(aproximación)*")
+        n_clt = int(np.ceil((1.96 * 0.5 / 0.01)**2))
+        st.latex(rf"z_{{0.975}} = 1.96 \Rightarrow n \geq \left(\frac{{1.96 \cdot 0.5}}{{0.01}}\right)^2 = {n_clt:,}")
+        st.caption("Asume convergencia a Gaussiana. Muy eficiente, pero es una aproximación.")
+    st.info(
+        "Reducir la confianza del 99% al 95% puede reducir sustancialmente el tamaño muestral requerido, según el método usado. "
+        "CLT da la muestra más pequeña pero es una aproximación; Chebyshev da garantía dura pero pide más datos."
+    )
+
+    worked_example("Chebyshev vs CLT para dimensionar muestras (caso general)")
     st.info("Chebyshev entrega una garantía conservadora. CLT entrega una aproximación muy útil cuando sus condiciones aplican, pero no es una garantía exacta para todo n.")
     st.markdown(
         "$X_i\\in[0,1]$, queremos $P(|\\bar X_n - \\mu|>0.05) \\leq 0.05$.\n\n"
@@ -3376,10 +3653,15 @@ def sec_limits():
         "**CLT** (aproximación): si tomamos el peor caso $\\sigma=0.5$, entonces para un intervalo bilateral del 95% necesitamos "
         "$1.96\\,\\sigma/\\sqrt n \\le 0.05$. Eso da $\\sqrt n \\ge 1.96\\cdot 0.5/0.05 = 19.6$ y por tanto "
         "$n \\ge 19.6^2 \\approx 384.2$.\n\n"
-        "→ CLT sigue siendo bastante más eficiente que Chebyshev cuando aplica, pero no por un factor tan extremo como decía el texto anterior."
+        "→ CLT sigue siendo bastante más eficiente que Chebyshev cuando aplica, pero no por un factor tan extremo."
     )
 
     interactive_header("LLN y CLT en acción")
+    lab_task(
+        predict="al aumentar n, las trayectorias del promedio deberían acercarse a la media y el histograma estandarizado a N(0,1).",
+        manipulate="cambia distribución fuente, n y número de repeticiones.",
+        verify="mira por separado estabilidad del promedio (LLN) y forma del error estandarizado (CLT).",
+    )
     tabs = st.tabs(["LLN (trayectorias)", "CLT (histograma de promedios)"])
     rng = np.random.default_rng(7)
     with tabs[0]:
@@ -3496,9 +3778,15 @@ def sec_limits():
         key="lim_q2"
     )
     ai_bridge(
-        "**Minibatch SGD** usa CLT: el gradiente de un batch es $\\mathcal N(\\nabla\\mathcal L, \\Sigma/|B|)$ "
-        "aproximadamente. Por eso batches más grandes → updates más estables. **Bootstrap** usa LLN para "
+        "**Minibatch SGD** suele modelarse con una aproximación tipo CLT: bajo independencia aproximada y varianza finita, "
+        "el gradiente promedio de un batch fluctúa alrededor del gradiente poblacional con escala cercana a $1/\\sqrt{|B|}$. "
+        "Por eso batches más grandes suelen dar updates más estables. **Bootstrap** usa LLN para "
         "estimar distribuciones de estadísticos. **Intervalos de confianza** al $95\\%$ → directamente del CLT ($\\pm 1.96 \\sigma/\\sqrt n$)."
+    )
+    minimum_takeaway(
+        "LLN estabiliza promedios; CLT describe la forma aproximada del error de esos promedios.",
+        "Cuando quiero justificar estimadores, intervalos de confianza o simulaciones Monte Carlo.",
+        "No debo concluir que todo entrenamiento iterativo converge ni que la normalidad sea exacta para n pequeño.",
     )
 
 # ==================================================================
@@ -3508,6 +3796,15 @@ def sec_randomized():
     section_title(
         "16. Algoritmos Aleatorizados",
         "Usar azar no como obstáculo sino como herramienta algorítmica: Quicksort y Quickselect."
+    )
+    source_note("Probabilidad y Estadistica.ipynb, celdas 5-15: Quicksort aleatorizado, conteo de comparaciones y mediana aleatorizada.")
+    beginner_bridge(
+        "por qué un algoritmo usa azar",
+        [
+            "Un pivote es el elemento que se usa para partir una lista en menores y mayores.",
+            "Aleatorizar el pivote evita que una entrada especialmente mala fuerce siempre el peor caso.",
+            "La comparación relevante es el trabajo típico esperado, no sólo una corrida aislada.",
+        ],
     )
     motivation(
         "Quicksort con pivote fijo tiene peor caso $O(n^2)$ (entrada ya ordenada). Con pivote **aleatorio** "
@@ -3535,6 +3832,13 @@ def sec_randomized():
     )
     st.latex(r"P(\text{comparar 2 y 5})=\frac{2}{4}")
     st.caption("$O(n\\log n)$ se lee como: el costo crece parecido a n multiplicado por el número de veces que puedes partir el problema.")
+    with st.expander("Paso a paso mínimo: pivote y partición", expanded=True):
+        compact_dataframe(pd.DataFrame([
+            {"Lista activa": "[5, 2, 4, 1, 3]", "Pivote": "4", "Menores": "[2, 1, 3]", "Mayores": "[5]", "Qué pasó": "se comparó 4 con los otros 4 elementos"},
+            {"Lista activa": "[2, 1, 3]", "Pivote": "2", "Menores": "[1]", "Mayores": "[3]", "Qué pasó": "se comparó 2 con 1 y 3"},
+            {"Lista activa": "[1], [3], [5]", "Pivote": "-", "Menores": "-", "Mayores": "-", "Qué pasó": "listas de tamaño 1 ya están ordenadas"},
+        ]))
+        st.caption("Quicksort repite esta partición recursivamente. El azar está en elegir el pivote.")
     formula_walkthrough(
         "La intuición detrás de $P(X_{ij}=1)=2/(j-i+1)$",
         terms={
@@ -3558,16 +3862,17 @@ def sec_randomized():
 
     worked_example("algoritmo de mediana aleatorizada de los insumos")
     st.markdown(
-        "El algoritmo de mediana aleatorizada toma una muestra con reemplazo de tamaño $\\lceil n^{3/4}\\rceil$, "
+        "El algoritmo de mediana aleatorizada toma una muestra aleatoria de tamaño $\\lceil n^{3/4}\\rceil$, "
         "ordena esa muestra, elige dos pivotes alrededor de su centro y sólo ordena el conjunto candidato "
         "$C=\\{x: d\\le x\\le u\\}$. Si los pivotes dejan fuera a la mediana o $C$ sale demasiado grande, declara fallo."
     )
+    st.caption("Trazabilidad: el notebook usa `random.sample`, es decir, muestra sin reemplazo. Esta implementación usa la misma convención para el laboratorio.")
     st.latex(r"P(\text{fallo}) \le n^{-1/4}")
 
     def _randomized_median_trial(a, rng):
         n = len(a)
         r_size = int(np.ceil(n ** 0.75))
-        sample = np.sort(rng.choice(a, size=r_size, replace=True))
+        sample = np.sort(rng.choice(a, size=min(r_size, n), replace=False))
         spread = int(np.ceil(np.sqrt(n)))
         center = r_size // 2
         d = sample[max(0, center - spread)]
@@ -3584,6 +3889,11 @@ def sec_randomized():
         return int(np.sort(C)[target - ld]), len(C)
 
     interactive_header("Mediana aleatorizada: tasa empírica de fallo")
+    lab_task(
+        predict="al crecer n, la cota n^(-1/4) baja lentamente.",
+        manipulate="cambia n y corridas simuladas.",
+        verify="compara fallo empírico, tamaño del candidato C y la cota teórica.",
+    )
     col1, col2 = lab_columns()
     with col1:
         n_med = st.slider("cantidad de elementos n", 101, 5001, 1001, step=100, key="med_n")
@@ -3614,6 +3924,11 @@ def sec_randomized():
     ], columns=2)
 
     interactive_header("Benchmark: Quicksort determinista vs aleatorizado")
+    lab_task(
+        predict="con entrada ordenada, el pivote fijo debería empeorar mucho frente al pivote aleatorio.",
+        manipulate="cambia tamaño de lista y tipo de entrada.",
+        verify="compara las barras con las referencias n log n y n^2.",
+    )
     interactive_guide(
         controls=[
             ("tamaño del array", "longitud del arreglo a ordenar."),
@@ -3735,19 +4050,95 @@ def sec_randomized():
 # ==================================================================
 def sec_gradient_backtracking():
     section_title(
-        "17. Descenso de Gradiente y Backtracking",
-        "Aplicación computacional de Semana 8: cómo el tamaño de paso controla la trayectoria."
+        "17. Descenso de Gradiente, Newton y Backtracking",
+        "Cómo el tamaño de paso, la curvatura y el momentum controlan la trayectoria de optimización."
+    )
+    source_note("Clase7b.pdf, págs. 38-54, y notebook Semana8.ipynb: Newton, descenso de gradiente, backtracking, momentum y zig-zag.")
+    beginner_bridge(
+        "qué hace un optimizador",
+        [
+            "Una pérdida mide qué tan mal está funcionando un modelo.",
+            "El gradiente indica hacia dónde sube más rápido la pérdida; por eso bajamos en la dirección contraria.",
+            "El tamaño de paso decide cuánto avanzar: demasiado pequeño es lento, demasiado grande puede oscilar.",
+        ],
     )
     motivation(
-        "El notebook de Semana 8 estudia descenso de gradiente sobre cuadráticas. Aunque es optimización, "
-        "conecta directamente con IA: entrenar modelos es iterar parámetros en dirección opuesta al gradiente."
+        "Entrenar un modelo de IA es resolver $\\min_\\theta \\mathcal{L}(\\theta)$. Los tres algoritmos de esta "
+        "sección son las piezas fundamentales de cualquier optimizador moderno (SGD, Adam, L-BFGS): "
+        "descenso de gradiente como base, backtracking para elegir el paso, Newton para aprovechar curvatura, "
+        "y momentum para acelerar el descenso en valles estrechos."
     )
-    st.info("Aunque esta sección es de optimización, aparece aquí porque muchos modelos probabilísticos se entrenan minimizando pérdidas como NLL o BCE mediante descenso de gradiente.")
+    st.info("Ruta recomendada si partes desde cero: revisa primero la sección 19 (Cálculo Diferencial), luego la 20 (Convexidad), y vuelve aquí. El gradiente define el movimiento; la convexidad elimina mínimos locales falsos cuando se cumplen sus supuestos.")
     prerequisites_box(
-        "- Gradiente: dirección de mayor crecimiento local.\n"
-        "- Descenso: $x_{t+1}=x_t-\\gamma\\nabla f(x_t)$.\n"
-        "- Backtracking: reducir $\\gamma$ hasta que el paso realmente disminuya la función."
+        "- Gradiente $\\nabla f(x)$: dirección de mayor crecimiento local.\n"
+        "- Hessiana $H(x) = \\nabla^2 f(x)$: matriz de segundas derivadas (curvatura).\n"
+        "- Convexidad: ver sección 20."
     )
+
+    st.markdown("### Descenso de gradiente")
+    st.latex(r"x_{k+1} = x_k - \gamma_k \nabla f(x_k)")
+    notation_box([
+        (r"\preceq", "Orden entre matrices: $A \\preceq B$ significa $B - A$ es semidefinida positiva (SDP), es decir, $v^\\top(B-A)v \\geq 0$ para todo $v$. En la práctica: la curvatura de $B$ supera a la de $A$ en todas las direcciones."),
+        ("m, M", "Constantes que acotan los valores propios (eigenvalores) de la Hessiana $H(x)$: $m$ es el mínimo y $M$ el máximo. Cuando $m \\approx M$, la función es casi 'redonda' y el descenso converge rápido."),
+    ])
+    st.markdown(
+        "Cuando $f$ es convexa con curvatura acotada $mI \\preceq H(x) \\preceq MI$, el descenso con "
+        "paso seguro $\\gamma = 1/M$ cumple esta garantía de convergencia lineal:"
+    )
+    st.latex(r"f(x_{k+1}) - f(x^\star) \leq \left(1 - \frac{m}{M}\right)\bigl(f(x_k) - f(x^\star)\bigr)")
+    st.caption("El ratio $m/M$ (razón de condición inversa) mide qué tan bien condicionado es el problema. Con $m \\approx M$ converge en muy pocas iteraciones; con $m \\ll M$ puede zig-zagear.")
+
+    st.markdown("### Método de Newton")
+    plain_language(
+        "Idea: usar curvatura local para dar saltos más inteligentes",
+        "El descenso de gradiente asume que la función es localmente plana — sólo usa información de primer orden. "
+        "Newton aproxima la función con un paraboloide (Taylor de orden 2) y salta directamente a su mínimo. "
+        "Bajo hipótesis locales de regularidad, Hessiana no singular y punto inicial suficientemente cercano, eso le da convergencia cuadrática."
+    )
+    st.latex(r"x_{k+1} = x_k - \bigl(H(x_k)\bigr)^{-1}\nabla f(x_k)")
+    formula_walkthrough(
+        "Por qué Newton converge cuadráticamente",
+        terms={
+            r"H(x_k)^{-1}": "Inversa de la Hessiana: 'estira' el paso según la curvatura de cada dirección.",
+            r"\nabla f(x_k)": "Gradiente: dirección de máxima pendiente.",
+            r"\|x_{k+1}-x^\star\|": "Error en el paso $k+1$.",
+        },
+        steps=[
+            "Newton minimiza el polinomio de Taylor de orden 2 de $f$ en torno a $x_k$.",
+            "Si $f$ fuera exactamente cuadrática, llegaría al mínimo exacto en un solo paso.",
+            "Para funciones generales, cada iteración cuadra el error: si estás a distancia $\\epsilon$, el siguiente paso te deja a $\\sim C\\epsilon^2$.",
+            "Limitación: calcular (e invertir) la Hessiana cuesta $O(n^3)$ — inviable para modelos con millones de parámetros."
+        ],
+        expanded=True,
+    )
+    worked_example("Newton en $F(x) = \\frac{1}{3}x^3 - 4x$")
+    st.markdown("$\\nabla F(x) = x^2 - 4$, $H(x) = 2x$. La iteración de Newton queda:")
+    st.latex(r"x_{k+1} = x_k - \frac{x_k^2 - 4}{2x_k} = \frac{x_k}{2} + \frac{2}{x_k}")
+    st.caption("Partiendo de $x_0 = 3$: $x_1 \\approx 2.167$, $x_2 \\approx 2.019$, $x_3 \\approx 2.000$ (converge al punto crítico $x^\\star = 2$, que es mínimo local).")
+
+    st.markdown("### Descenso con Momentum")
+    st.markdown(
+        "El momentum agrega un término de 'inercia' que acumula la dirección de pasos anteriores. "
+        "Reduce las oscilaciones en valles estrechos y acelera la convergencia en pasillos largos."
+    )
+    st.latex(r"z_k = \nabla f(x_k) + \beta z_{k-1}, \qquad x_{k+1} = x_k - \gamma z_k")
+    st.caption("$\\beta \\in [0,1)$ controla cuánto 'recuerda' el optimizador pasos anteriores. Con $\\beta=0$ recuperamos el descenso estándar.")
+    insight(
+        "El momentum reduce las oscilaciones porque 'promedia' gradientes consecutivos: si el gradiente "
+        "zig-zagea, los componentes que se cancelan se anulan y queda la dirección de avance neta. "
+        "En la práctica, valores como $\\beta = 0.9$ funcionan bien en redes neuronales."
+    )
+    with advanced_expander("Paso y momentum óptimos para una cuadrática (requiere álgebra lineal)"):
+        st.markdown(
+            "Para $f(x) = \\frac{1}{2}x^\\top Sx$, los eigenvalores (valores propios) de $S$ "
+            "cuantifican la curvatura en cada dirección: $\\lambda_{\\min}$ en la dirección más 'plana' "
+            "y $\\lambda_{\\max}$ en la más 'empinada'. Los parámetros óptimos son:"
+        )
+        latex_aligned([
+            r"\gamma^\star = \left(\frac{2}{\sqrt{\lambda_{\max}}+\sqrt{\lambda_{\min}}}\right)^2",
+            r"\beta^\star = \left(\frac{\sqrt{\lambda_{\max}}-\sqrt{\lambda_{\min}}}{\sqrt{\lambda_{\max}}+\sqrt{\lambda_{\min}}}\right)^2",
+        ])
+        st.caption("Con estos parámetros el número de iteraciones para converger crece como $\\sqrt{\\lambda_{\\max}/\\lambda_{\\min}}$ en lugar de $\\lambda_{\\max}/\\lambda_{\\min}$ — una mejora radical cuando el problema está mal condicionado.")
 
     st.markdown("### Descenso zig-zag en una cuadrática anisotrópica")
     st.latex(r"f(x,y)=\tfrac12(x^2+b y^2),\qquad \nabla f(x,y)=(x,by)")
@@ -3758,7 +4149,7 @@ def sec_gradient_backtracking():
     real_world_case(
         "ajustar dos parámetros de un modelo",
         "Piensa que `x` e `y` son dos parámetros de un modelo y `f` es la pérdida que queremos bajar. "
-        "El parámetro `b` controla qué tan estrecho es el valle en la dirección y: si cambia mucho más rápido en un eje que en otro, el descenso puede oscilar.",
+        "El parámetro `b` controla la curvatura en la dirección y: si las curvaturas por eje son muy distintas, el problema queda mal condicionado y el descenso puede oscilar o avanzar lento.",
         controls=[
             ("curvatura del valle b", "curvatura relativa en la dirección y."),
             ("tamaño de paso gamma", "cuánto avanzamos contra el gradiente."),
@@ -3803,6 +4194,11 @@ def sec_gradient_backtracking():
     lab_note("cada punto naranja es una iteración sucesiva; el punto negro es el mínimo de la pérdida.")
 
     interactive_header("Backtracking line search")
+    lab_task(
+        predict="si alpha exige demasiada mejora o beta achica muy agresivamente, los pasos aceptados cambiarán.",
+        manipulate="mueve alpha, beta e iteraciones.",
+        verify="mira la trayectoria y la gráfica de pasos aceptados.",
+    )
     st.markdown(
         "Backtracking parte con un paso candidato y lo reduce por un factor $\\beta$ hasta satisfacer una condición tipo Armijo."
     )
@@ -3828,7 +4224,7 @@ def sec_gradient_backtracking():
     )
     col1, col2 = lab_columns()
     with col1:
-        alpha_bt = st.slider("exigencia de mejora α", 0.0, 0.5, 0.1, step=0.05, key="bt_alpha")
+        alpha_bt = st.slider("exigencia de mejora α", 0.01, 0.49, 0.1, step=0.01, key="bt_alpha")
         beta_bt = st.slider("factor para achicar el paso β", 0.1, 0.9, 0.5, step=0.05, key="bt_beta")
         n_bt = st.slider("iteraciones backtracking", 1, 40, 10, key="bt_iters")
 
@@ -3887,6 +4283,975 @@ def sec_gradient_backtracking():
     )
     lab_note("en 'pasos aceptados', el eje vertical no es precisión ni pérdida: es el tamaño de paso elegido en cada iteración.")
 
+    interactive_header("Descenso de gradiente vs Newton vs Momentum")
+    lab_task(
+        predict="Newton debería resolver la cuadrática en un paso; momentum debería reducir oscilaciones en casos mal condicionados.",
+        manipulate="cambia b, algoritmo, paso gamma y beta.",
+        verify="compara trayectoria y pérdida en escala logarítmica.",
+    )
+    interactive_guide(
+        controls=[
+            ("Curvatura b", "controla el condicionamiento de la cuadrática; valores muy distintos de 1 crean direcciones con curvaturas desbalanceadas."),
+            ("Algoritmo", "elige entre descenso estándar, Newton o descenso con momentum."),
+            ("β (momentum)", "solo activo cuando se elige momentum; controla la inercia."),
+            ("Iteraciones", "número de pasos del optimizador."),
+        ],
+        procedure="Todos optimizan $f(x_1, x_2) = \\frac{1}{2}(x_1^2 + b x_2^2)$ partiendo del mismo punto.",
+        observe="Compara la trayectoria y el valor final de la pérdida. Newton llega en 1 paso (cuadrática exacta); "
+                "gradient descent puede zig-zagear; momentum reduce las oscilaciones.",
+    )
+    col1, col2 = lab_columns()
+    with col1:
+        b_cmp = st.slider("curvatura b", 0.01, 2.0, 0.05, step=0.01, key="cmp_b")
+        algo = st.radio("Algoritmo", ["Descenso de gradiente", "Newton", "Momentum"], key="cmp_algo")
+        n_cmp = st.slider("Iteraciones", 3, 60, 20, key="cmp_iters")
+        gamma_cmp = st.slider("Paso γ", 0.01, 2.5, min(2/(1+b_cmp), 2.4), key="cmp_gamma")
+        beta_cmp = st.slider("β (momentum)", 0.0, 0.99, 0.8, step=0.01, key="cmp_beta") if algo == "Momentum" else 0.0
+
+    def _f_cmp(z, b): return 0.5*(z[0]**2 + b*z[1]**2)
+    def _g_cmp(z, b): return np.array([z[0], b*z[1]])
+    def _h_inv_cmp(z, b): return np.diag([1.0, 1.0/b])
+
+    z0 = np.array([2.0, 1.5])
+    path_cmp = [z0.copy()]
+    losses_cmp = [_f_cmp(z0, b_cmp)]
+    z = z0.copy()
+    mom_z = np.zeros(2)
+    for _ in range(n_cmp):
+        g = _g_cmp(z, b_cmp)
+        if algo == "Descenso de gradiente":
+            z = z - gamma_cmp * g
+        elif algo == "Newton":
+            z = z - _h_inv_cmp(z, b_cmp) @ g
+        else:
+            mom_z = g + beta_cmp * mom_z
+            z = z - gamma_cmp * mom_z
+        path_cmp.append(z.copy())
+        losses_cmp.append(_f_cmp(z, b_cmp))
+    path_cmp = np.array(path_cmp)
+
+    with col2:
+        metric_grid([
+            ("Pérdida inicial", f"{losses_cmp[0]:.3f}"),
+            ("Pérdida final", f"{losses_cmp[-1]:.2e}"),
+        ], columns=2)
+        xx2, yy2 = np.meshgrid(np.linspace(-2.5, 2.5, 160), np.linspace(-2.0, 2.0, 160))
+        zz2 = 0.5*(xx2**2 + b_cmp*yy2**2)
+        fig2, axes2 = plt.subplots(1, 2, figsize=(10.2, 3.6))
+        axes2[0].contour(xx2, yy2, zz2, levels=20, cmap="viridis")
+        axes2[0].plot(path_cmp[:, 0], path_cmp[:, 1], "o-", color="#DD8452", ms=3.5, lw=1.4)
+        axes2[0].scatter([0], [0], color="black", s=30, zorder=5)
+        axes2[0].set_title(f"Trayectoria — {algo}")
+        axes2[0].set_xlabel("$x_1$"); axes2[0].set_ylabel("$x_2$")
+        axes2[1].semilogy(losses_cmp, "o-", color="#4C72B0", ms=3)
+        axes2[1].set_xlabel("iteración"); axes2[1].set_ylabel("$f(x_k)$")
+        axes2[1].set_title("Curva de convergencia (escala log)")
+        plt.tight_layout()
+        st.pyplot(fig2); plt.close(fig2)
+    how_to_read(
+        "Izquierda: trayectoria en el espacio de parámetros. "
+        "Derecha: pérdida en escala logarítmica — una recta indica convergencia lineal; "
+        "Newton sobre cuadráticas converge en un solo paso."
+    )
+
+    self_check_header()
+    quiz(
+        "¿Por qué Newton no se usa directamente en redes neuronales grandes?",
+        ["Porque no converge en funciones no convexas",
+         "Porque calcular e invertir la Hessiana ($n\\times n$) es $O(n^3)$, inviable con millones de parámetros",
+         "Porque el momentum es siempre mejor"],
+        1,
+        "Con $n=10^7$ parámetros, la Hessiana tiene $10^{14}$ entradas. Existen aproximaciones como L-BFGS que evitan calcularla explícitamente.",
+        "El costo cúbico de la inversión es el obstáculo central.",
+        key="gd_q1"
+    )
+    quiz(
+        "El backtracking de Armijo sirve para...",
+        ["Calcular el gradiente exacto",
+         "Encontrar un tamaño de paso que garantice suficiente disminución de $f$",
+         "Eliminar el zig-zag siempre"],
+        1,
+        "La condición de Armijo: $f(x - \\gamma g) \\leq f(x) - \\alpha\\gamma\\|g\\|^2$. Garantiza que la pérdida sí baja.",
+        "Backtracking no calcula gradientes; solo ajusta el tamaño de paso hasta que la función baje 'suficientemente'.",
+        key="gd_q2"
+    )
+    ai_bridge(
+        "**Adam** = momentum (primer momento) + escala adaptativa por varianza del gradiente (segundo momento). "
+        "**L-BFGS** = Newton aproximado sin calcular la Hessiana completa, usando historial de gradientes. "
+        "**Learning rate scheduling** = backtracking global a lo largo de las épocas. "
+        "Todo optimizador moderno combina estas tres ideas."
+    )
+
+# ==================================================================
+# SECCIÓN 18 — MÉTODO DE LOS MOMENTOS
+# ==================================================================
+def sec_mom():
+    section_title(
+        "18. Método de los Momentos (MoM)",
+        "El enfoque más intuitivo para aprender parámetros de una distribución: igualar momentos muestrales con teóricos."
+    )
+    source_note("Clase7.pdf, págs. 55-59: estimación de parámetros y Método de los Momentos.")
+    beginner_bridge(
+        "estimar un parámetro",
+        [
+            "Un parámetro es un número desconocido que controla una distribución, como lambda en Poisson o mu en Normal.",
+            "MoM iguala resúmenes observados de los datos con resúmenes teóricos de la distribución.",
+            "Funciona bien sólo cuando esos momentos realmente identifican el parámetro y existen las condiciones de convergencia.",
+        ],
+    )
+    motivation(
+        "Hasta ahora asumíamos que los parámetros ($\\mu$, $\\sigma$, $\\lambda$) eran conocidos. "
+        "En IA enfrentamos el **problema inverso**: dado un dataset, ¿qué distribución lo generó? "
+        "El Método de los Momentos (MoM) usa la **Ley de los Grandes Números** como puente: "
+        "los momentos muestrales $\\hat\\mu_k = \\frac{1}{n}\\sum X_i^k$ convergen a los momentos teóricos $E[X^k]$. "
+        "Igualando ambos se despeja el parámetro."
+    )
+    prerequisites_box(
+        "- $E[X]$, $E[X^2]$, varianza.\n"
+        "- Ley de los Grandes Números (sección 15).\n"
+        "- Distribuciones Poisson y Normal (sección 7)."
+    )
+    st.markdown("### Construcción general")
+    plain_language(
+        "Idea central del MoM",
+        "Los momentos de una distribución son cantidades como $E[X]$, $E[X^2]$, etc. "
+        "El MoM dice: si tienes un parámetro desconocido $\\theta$, exprésalo en términos de momentos teóricos y luego "
+        "sustitúyelo por los momentos muestrales. Es el método de estimación más antiguo e intuitivo. "
+        "Existe un método alternativo más sofisticado (Máxima Verosimilitud, MLE) que puede ser más preciso "
+        "pero requiere conocer la distribución exacta y a veces no tiene solución cerrada — la comparación aparece al final de esta sección."
+    )
+    pitfall(
+        "El MoM sólo funciona si los momentos **identifican** el parámetro, es decir, si parámetros distintos "
+        "producen momentos distintos. Si dos distribuciones con $\\theta_1 \\neq \\theta_2$ tienen el mismo $E[X]$, "
+        "MoM no puede distinguirlas con un solo momento — se necesitaría un momento de orden superior."
+    )
+    st.markdown("**Procedimiento en 3 pasos:**")
+    latex_aligned([
+        r"\text{1. Expresar } \theta \text{ como función de los momentos teóricos: } \mu_k = E[X^k]",
+        r"\text{2. Sustituir por momentos muestrales: } \hat\mu_k = \frac{1}{n}\sum_{i=1}^n X_i^k",
+        r"\text{3. Despejar } \hat\theta \text{ del sistema de ecuaciones resultante}",
+    ])
+    insight(
+        "Con $p$ parámetros desconocidos, se necesitan $p$ ecuaciones de momentos. "
+        "Bajo identificación, momentos finitos y continuidad del mapeo de momentos, los estimadores MoM son consistentes: "
+        "$\\hat\\theta \\xrightarrow{P} \\theta$ cuando $n\\to\\infty$."
+    )
+
+    worked_example("MoM para Poisson($\\lambda$) — número de clics por minuto")
+    st.markdown(
+        "Sea $X_1,\\ldots,X_n \\sim \\text{Poisson}(\\lambda)$, donde $\\lambda$ es desconocido. "
+        "Para una Poisson, el primer momento teórico es simplemente $E[X] = \\lambda$."
+    )
+    latex_aligned([
+        r"E[X] = \lambda",
+        r"\Longrightarrow \hat\lambda_{\text{MoM}} = \hat\mu_1 = \frac{1}{n}\sum_{i=1}^n X_i = \bar X_n",
+    ])
+    st.success("El estimador MoM de $\\lambda$ es el promedio de los datos observados. Coincide con el MLE.")
+
+    worked_example("MoM para Normal($\\mu$, $\\sigma^2$) — dos parámetros, dos momentos")
+    st.markdown(
+        "Sea $X_i \\sim \\mathcal{N}(\\mu, \\sigma^2)$ con $\\mu$ y $\\sigma^2$ desconocidos. "
+        "Necesitamos dos ecuaciones:"
+    )
+    latex_aligned([
+        r"\text{1er momento: } \mu = E[X] \Longrightarrow \hat\mu = \bar X_n",
+        r"\text{2do momento: } \sigma^2 = E[X^2] - (E[X])^2 \Longrightarrow \hat\sigma^2 = \hat\mu_2 - \bar X_n^2",
+    ])
+    st.markdown("Donde $\\hat\\mu_2 = \\frac{1}{n}\\sum X_i^2$. Sustituyendo:")
+    st.latex(r"\hat\sigma^2 = \frac{1}{n}\sum_i X_i^2 - \bar X_n^2 = \frac{1}{n}\sum_i (X_i - \bar X_n)^2")
+    pitfall(
+        "El estimador MoM de $\\sigma^2$ divide por $n$, no por $n-1$. "
+        "Por eso es ligeramente **sesgado** (subestima la varianza), a diferencia de $S^2$ con corrección de Bessel. "
+        "El MLE de la Normal también usa $n$; la corrección $n-1$ es un ajuste de insesgadez separado."
+    )
+
+    st.markdown("### MoM vs MLE — ¿cuándo preferir uno u otro?")
+    col_mom, col_mle = st.columns(2)
+    with col_mom:
+        st.markdown("**Método de los Momentos**")
+        st.markdown(
+            "- ✅ Muy simple: basta igualar promedios de potencias.\n"
+            "- ✅ Puede producir estimadores consistentes bajo identificación y condiciones regulares.\n"
+            "- ✅ Útil cuando la distribución exacta es desconocida (solo se modelan momentos).\n"
+            "- ⚠️ Puede ser sesgado (no maximiza la verosimilitud).\n"
+            "- ⚠️ Menos eficiente que MLE cuando la distribución es correctamente especificada."
+        )
+    with col_mle:
+        st.markdown("**Máxima Verosimilitud (MLE)**")
+        st.markdown(
+            "- ✅ Asintóticamente eficiente (menor varianza posible para $n$ grande).\n"
+            "- ✅ Invariante bajo transformaciones del parámetro.\n"
+            "- ⚠️ Requiere conocer la distribución correcta.\n"
+            "- ⚠️ Puede requerir optimización numérica si no hay forma cerrada.\n"
+            "- ⚠️ La log-verosimilitud puede ser no cóncava (múltiples máximos)."
+        )
+
+    interactive_header("Ajuste de distribución por MoM")
+    lab_task(
+        predict="al aumentar n, el ajuste MoM debería acercarse a la distribución verdadera.",
+        manipulate="elige distribución, tamaño de muestra y simula nuevas muestras.",
+        verify="compara parámetros verdaderos, estimadores y la curva ajustada contra el histograma.",
+    )
+    interactive_guide(
+        controls=[
+            ("Distribución", "la distribución verdadera que genera los datos."),
+            ("Tamaño de muestra n", "cuántas observaciones usarás para estimar el parámetro."),
+            ("Simular nueva muestra", "genera una nueva realización para ver la variabilidad del estimador."),
+        ],
+        procedure=(
+            "Se generan $n$ observaciones i.i.d., se calcula el estimador MoM, y se compara la distribución ajustada "
+            "con la distribución verdadera y el histograma de los datos."
+        ),
+        observe=(
+            "Con $n$ pequeño, el estimador MoM fluctúa bastante. A medida que crece $n$, la distribución ajustada "
+            "se aproxima a la verdadera (consistencia garantizada por LLN)."
+        ),
+    )
+    col1, col2 = lab_columns()
+    with col1:
+        mom_dist = st.selectbox(
+            "Distribución verdadera",
+            ["Poisson(λ=3)", "Normal(μ=2, σ=1.5)", "Exponencial(λ=2)"],
+            key="mom_dist",
+        )
+        n_mom = st.slider("Tamaño de muestra n", 10, 2000, 100, step=10, key="mom_n")
+        if st.button("Simular nueva muestra", key="mom_sim"):
+            st.session_state["mom_seed"] = np.random.randint(0, 100000)
+        seed_mom = st.session_state.get("mom_seed", 7)
+        rng_mom = np.random.default_rng(seed_mom)
+
+        if mom_dist.startswith("Poisson"):
+            lam_true = 3.0
+            data_mom = rng_mom.poisson(lam_true, size=n_mom)
+            lam_hat = data_mom.mean()
+            st.markdown("**Parámetro verdadero:** $\\lambda = 3$")
+            st.markdown(f"**Estimador MoM:** $\\hat\\lambda = \\bar X_n = {lam_hat:.4f}$")
+            metric_grid([
+                ("λ verdadero", "3.000"),
+                ("λ̂ MoM", f"{lam_hat:.4f}"),
+                ("Error", f"{abs(lam_hat-lam_true):.4f}"),
+                ("n", str(n_mom)),
+            ], columns=2)
+        elif mom_dist.startswith("Normal"):
+            mu_true, sigma_true = 2.0, 1.5
+            data_mom = rng_mom.normal(mu_true, sigma_true, size=n_mom)
+            mu_hat = data_mom.mean()
+            sigma2_hat = ((data_mom - mu_hat)**2).mean()
+            st.markdown("**Parámetros verdaderos:** $\\mu=2,\\ \\sigma^2=2.25$")
+            st.markdown(f"**Estimadores MoM:** $\\hat\\mu = {mu_hat:.4f},\\ \\hat\\sigma^2 = {sigma2_hat:.4f}$")
+            metric_grid([
+                ("μ verdadero", "2.000"),
+                ("μ̂ MoM", f"{mu_hat:.4f}"),
+                ("σ² verdadera", "2.250"),
+                ("σ̂² MoM", f"{sigma2_hat:.4f}"),
+            ], columns=2)
+        else:
+            lam_true_exp = 2.0
+            data_mom = rng_mom.exponential(1/lam_true_exp, size=n_mom)
+            lam_hat_exp = 1.0 / data_mom.mean()
+            st.markdown("**Parámetro verdadero:** $\\lambda = 2$  (media = 0.5)")
+            st.markdown(f"**Estimador MoM:** $\\hat\\lambda = 1/\\bar X_n = {lam_hat_exp:.4f}$")
+            metric_grid([
+                ("λ verdadero", "2.000"),
+                ("λ̂ MoM", f"{lam_hat_exp:.4f}"),
+                ("Error", f"{abs(lam_hat_exp-lam_true_exp):.4f}"),
+                ("n", str(n_mom)),
+            ], columns=2)
+    with col2:
+        fig_mom, ax_mom = plt.subplots(figsize=(7, 3.5))
+        if mom_dist.startswith("Poisson"):
+            max_val = max(int(data_mom.max()) + 2, 12)
+            xs_p = np.arange(0, max_val)
+            ax_mom.bar(xs_p - 0.2, [np.sum(data_mom == k)/n_mom for k in xs_p],
+                       width=0.35, label="Histograma (datos)", color="#4C72B0", alpha=0.75)
+            ax_mom.bar(xs_p + 0.2, stats.poisson.pmf(xs_p, lam_hat),
+                       width=0.35, label=f"MoM ajustado (λ̂={lam_hat:.2f})", color="#DD8452", alpha=0.75)
+            ax_mom.bar(xs_p + 0.0, stats.poisson.pmf(xs_p, lam_true),
+                       width=0.05, label="Distribución verdadera", color="#059669", lw=2)
+            ax_mom.set_xlabel("k"); ax_mom.set_ylabel("Probabilidad")
+        elif mom_dist.startswith("Normal"):
+            xs_n = np.linspace(data_mom.min() - 1, data_mom.max() + 1, 200)
+            ax_mom.hist(data_mom, bins=30, density=True, alpha=0.55, color="#4C72B0", label="Datos")
+            ax_mom.plot(xs_n, stats.norm.pdf(xs_n, mu_hat, np.sqrt(sigma2_hat)),
+                        color="#DD8452", lw=2, label=f"MoM ajustado (μ̂={mu_hat:.2f}, σ̂={np.sqrt(sigma2_hat):.2f})")
+            ax_mom.plot(xs_n, stats.norm.pdf(xs_n, mu_true, sigma_true),
+                        color="#059669", lw=2, ls="--", label="Distribución verdadera")
+            ax_mom.set_xlabel("x"); ax_mom.set_ylabel("Densidad")
+        else:
+            xs_e = np.linspace(0, data_mom.max() + 0.5, 200)
+            ax_mom.hist(data_mom, bins=30, density=True, alpha=0.55, color="#4C72B0", label="Datos")
+            ax_mom.plot(xs_e, stats.expon.pdf(xs_e, scale=1/lam_hat_exp),
+                        color="#DD8452", lw=2, label=f"MoM ajustado (λ̂={lam_hat_exp:.2f})")
+            ax_mom.plot(xs_e, stats.expon.pdf(xs_e, scale=1/lam_true_exp),
+                        color="#059669", lw=2, ls="--", label="Distribución verdadera")
+            ax_mom.set_xlabel("x"); ax_mom.set_ylabel("Densidad")
+        ax_mom.set_title(f"MoM: n={n_mom}")
+        ax_mom.legend(fontsize=8)
+        st.pyplot(fig_mom)
+        plt.close(fig_mom)
+    how_to_read(
+        "Las barras azules (o histograma azul) son los datos simulados. La curva naranja es la distribución "
+        "ajustada por MoM; la verde punteada es la distribución verdadera. Con $n$ pequeño, naranja y verde pueden "
+        "diferir. Al crecer $n$, el ajuste MoM converge a la verdad (por LLN)."
+    )
+
+    self_check_header()
+    quiz(
+        "¿Por qué el estimador MoM de $\\sigma^2$ es ligeramente sesgado?",
+        [
+            "Porque usa todos los datos",
+            "Porque divide por $n$ en vez de $n-1$; usa $\\bar X$ ya calculado de los mismos datos",
+            "Porque solo usa el primer momento",
+        ],
+        1,
+        "Dividir por $n$ en vez de $n-1$ introduce sesgo negativo: en promedio subestima la varianza.",
+        "La corrección de Bessel ($n-1$) compensa el haber usado $\\bar X$ como centro de los datos.",
+        key="mom_q1"
+    )
+    quiz(
+        "Si los datos son $X_1,...,X_n \\sim \\text{Poisson}(\\lambda)$ desconocida, el estimador MoM de $\\lambda$ es...",
+        ["$S^2 = \\frac{1}{n-1}\\sum(X_i-\\bar X)^2$", "$\\bar X_n$", "$\\max_i X_i$"],
+        1,
+        "Igualamos $E[X] = \\lambda$ con $\\hat\\mu_1 = \\bar X_n$. Sencillo y coincide con MLE.",
+        "Para la Poisson, $E[X]=\\lambda$, así que $\\hat\\lambda = \\bar X_n$.",
+        key="mom_q2"
+    )
+    ai_bridge(
+        "El MoM es el precursor conceptual de muchos métodos en ML: "
+        "**normalización de batch** estima media y varianza de activaciones (momentos de orden 1 y 2); "
+        "los **Modelos de Mezcla Gaussiana (GMM)** se ajustan estimando medias, varianzas y pesos de componentes; "
+        "en **NLP**, los *embedding* de palabras capturan momentos de co-ocurrencia. "
+        "Estimar momentos muestrales es el primer paso antes de ajustar cualquier modelo probabilístico complejo."
+    )
+
+
+# ==================================================================
+# SECCIÓN 19 — CÁLCULO DIFERENCIAL PARA IA
+# ==================================================================
+def sec_calculo():
+    section_title(
+        "19. Cálculo Diferencial para IA",
+        "Derivadas, gradiente, Hessiana y Jacobiana: las herramientas que hacen posible el aprendizaje."
+    )
+    source_note("Clase7b.pdf, págs. 4-26: cálculo en una variable, Taylor, gradiente, Hessiana, Jacobiana y regla de la cadena.")
+    beginner_bridge(
+        "derivadas sin notación",
+        [
+            "Una derivada mide cuánto cambia una salida cuando mueves un poco una entrada.",
+            "El gradiente junta muchas derivadas: una por cada parámetro.",
+            "La Hessiana mide curvatura; la Jacobiana organiza derivadas cuando hay varias salidas.",
+        ],
+    )
+    motivation(
+        "Entrenar un modelo de IA requiere medir *cómo cambia la pérdida* cuando se perturba cada parámetro. "
+        "Eso es exactamente lo que calculan las derivadas. Esta sección construye desde la derivada escalar "
+        "hasta el gradiente multivariable y la Hessiana, las mismas herramientas que usa la backpropagation."
+    )
+    prerequisites_box(
+        "- Límites: $\\lim_{h\\to0}$.\n"
+        "- Funciones $f: \\mathbb{R} \\to \\mathbb{R}$ y $f: \\mathbb{R}^n \\to \\mathbb{R}$.\n"
+        "- Producto interno de vectores."
+    )
+
+    st.markdown("### Derivada en una variable")
+    plain_language(
+        "Razón de cambio instantáneo",
+        "La derivada $f'(a)$ es la pendiente de la recta tangente a $f$ en el punto $x=a$. "
+        "Mientras la recta secante mide el cambio promedio en un intervalo $[a, a+h]$, "
+        "la tangente mide el cambio exactamente en $a$ (límite cuando $h \\to 0$)."
+    )
+    latex_aligned([
+        r"f'(x) = \lim_{h \to 0} \frac{f(x+h) - f(x)}{h}",
+    ])
+    notation_box([
+        (r"f'(x)", "Derivada de $f$ en $x$: razón de cambio instantánea."),
+        (r"h", "Perturbación infinitesimal; desaparece en el límite."),
+        (r"f''(x)", "Segunda derivada: mide cómo cambia la pendiente (curvatura)."),
+    ], expanded=False)
+    with st.expander("Diferenciabilidad y ejemplos donde falla", expanded=True):
+        st.markdown(
+            "- Una función es diferenciable en $a$ si la pendiente límite existe desde ambos lados.\n"
+            "- Una discontinuidad no es diferenciable.\n"
+            "- $|x|$ no es diferenciable en 0: por la izquierda la pendiente es -1 y por la derecha es 1.\n"
+            "- $1/(x-1)$ no es diferenciable en $x=1$ porque la función ni siquiera está definida ahí."
+        )
+    with advanced_expander("Tabla de derivadas esenciales"):
+        col_d1, col_d2 = st.columns(2)
+        with col_d1:
+            st.markdown(
+                "| $f(x)$ | $f'(x)$ |\n"
+                "|---|---|\n"
+                "| $c$ (constante) | $0$ |\n"
+                "| $x^n$ | $n x^{n-1}$ |\n"
+                "| $e^x$ | $e^x$ |\n"
+                "| $a^x$ | $a^x \\ln a$ |\n"
+            )
+        with col_d2:
+            st.markdown(
+                "| $f(x)$ | $f'(x)$ |\n"
+                "|---|---|\n"
+                "| $\\ln x$ | $1/x$ |\n"
+                "| $\\sin x$ | $\\cos x$ |\n"
+                "| $\\cos x$ | $-\\sin x$ |\n"
+                "| $\\sigma(x) = 1/(1+e^{-x})$ | $\\sigma(x)(1-\\sigma(x))$ |\n"
+            )
+        st.markdown("**Reglas de combinación:**")
+        latex_aligned([
+            r"(f \pm g)' = f' \pm g'",
+            r"(fg)' = f'g + fg' \quad \text{(regla del producto)}",
+            r"\left(\frac{f}{g}\right)' = \frac{f'g-fg'}{g^2} \quad \text{(regla del cociente)}",
+            r"(f \circ g)'(x) = f'(g(x))\,g'(x) \quad \text{(regla de la cadena)}",
+            r"\log_a(x)' = \frac{1}{x\ln a}",
+        ])
+        pitfall("La regla de la cadena es la base de backpropagation: la derivada de una función compuesta es el producto de las derivadas en cada capa.")
+
+    st.markdown("### Polinomios de Taylor")
+    st.markdown(
+        "Un polinomio de Taylor de orden $n$ aproxima $f$ cerca del punto $a$ usando sus primeras $n$ derivadas:"
+    )
+    st.latex(r"T_n(x) = \sum_{k=0}^{n} \frac{f^{(k)}(a)}{k!}(x-a)^k")
+    worked_example("Taylor de $\\cos(x)$ en torno a $a=0$ (orden 4)")
+    st.latex(r"T_4(x) = 1 - \frac{x^2}{2} + \frac{x^4}{24}")
+    st.caption("A orden 2 tenemos la aproximación cuadrática usada en el Método de Newton.")
+
+    st.markdown("### Gradiente: derivada multivariable")
+    st.markdown(
+        "Para $f: \\mathbb{R}^n \\to \\mathbb{R}$, el gradiente es el vector de derivadas parciales:"
+    )
+    st.latex(r"\nabla f(x) = \left[\frac{\partial f}{\partial x_1}, \ldots, \frac{\partial f}{\partial x_n}\right]^\top \in \mathbb{R}^n")
+    insight(
+        "El gradiente apunta en la dirección de **máximo crecimiento** local. Por eso el descenso de gradiente "
+        "va en dirección $-\\nabla f$: opuesta al crecimiento, hacia el mínimo."
+    )
+    st.markdown("**Derivada direccional** en la dirección $v$ (unitario):")
+    st.latex(r"D_v f(x) = \nabla f(x) \cdot v")
+    st.caption("El máximo de $D_v f$ sobre todos los $v$ unitarios se alcanza cuando $v = \\nabla f(x)/\\|\\nabla f(x)\\|$.")
+    worked_example("Gradiente de $f(x_1, x_2, x_3) = (x_1 + e^{x_2})^2 + \\ln(x_2 x_3)$")
+    latex_aligned([
+        r"\frac{\partial f}{\partial x_1} = 2(x_1 + e^{x_2})",
+        r"\frac{\partial f}{\partial x_2} = 2(x_1 + e^{x_2})e^{x_2} + \frac{1}{x_2}",
+        r"\frac{\partial f}{\partial x_3} = \frac{1}{x_3}",
+    ])
+
+    st.markdown("### Hessiana: curvatura multivariable")
+    st.markdown("La **matriz Hessiana** $H \\in \\mathbb{R}^{n \\times n}$ recoge todas las segundas derivadas parciales:")
+    st.latex(r"H_{ij}(x) = \frac{\partial^2 f}{\partial x_i \partial x_j}(x)")
+    st.markdown("**Aproximación de Taylor de orden 2** (base del Método de Newton):")
+    st.latex(r"f(x + \Delta x) \approx f(x) + (\Delta x)^\top \nabla f(x) + \frac{1}{2}(\Delta x)^\top H(x)\,\Delta x")
+    st.caption("Si $H(z)$ es semidefinida positiva para todo $z$ de un dominio convexo, entonces $f$ es convexa en ese dominio. Una Hessiana PSD en un punto sólo describe curvatura local.")
+
+    st.markdown("### Matriz Jacobiana: funciones vectoriales")
+    st.markdown("Para $f: \\mathbb{R}^n \\to \\mathbb{R}^m$ con $f = [f_1, \\ldots, f_m]^\\top$, la Jacobiana es:")
+    st.latex(r"J(x) = \frac{\partial f}{\partial x} \in \mathbb{R}^{m \times n}, \qquad J_{ij} = \frac{\partial f_i}{\partial x_j}")
+    worked_example("Jacobiana de una función lineal $f(x)=Ax$")
+    st.markdown("Si $A\\in\\mathbb{R}^{m\\times n}$ y $f(x)=Ax$, cada salida es combinación lineal de las entradas. Su Jacobiana es constante:")
+    st.latex(r"J_f(x)=A")
+    formula_walkthrough(
+        "Regla de la cadena generalizada",
+        formula=r"\frac{d}{dt}(f \circ g)(t) = J_f(g(t)) \cdot J_g(t)",
+        terms={
+            r"J_f(g(t))": "Jacobiana de $f$ evaluada en $g(t)$.",
+            r"J_g(t)": "Jacobiana de $g$ evaluada en $t$.",
+        },
+        steps=[
+            "En 1D, la regla de la cadena es $(f\\circ g)' = f'(g(t))\\cdot g'(t)$.",
+            "En dimensión mayor, las derivadas escalares se reemplazan por Jacobianas.",
+            "Backpropagation aplica esto repetidamente por las capas de una red neuronal.",
+        ],
+        expanded=False,
+    )
+    worked_example("Gradiente de la pérdida de mínimos cuadrados $L = \\|y - \\Phi\\theta\\|^2$")
+    st.markdown("Con $e = y - \\Phi\\theta$ (residuo) y $L = \\|e\\|^2$:")
+    st.markdown("Aplicando la regla de la cadena (Jacobiana × Jacobiana):")
+    latex_aligned([
+        r"\frac{\partial L}{\partial e} = 2e^\top \in \mathbb{R}^{1 \times N} \quad \text{(vector fila)}",
+        r"\frac{\partial e}{\partial \theta} = -\Phi \in \mathbb{R}^{N \times D}",
+        r"\frac{\partial L}{\partial \theta} = \frac{\partial L}{\partial e}\frac{\partial e}{\partial \theta} = -2e^\top \Phi \in \mathbb{R}^{1\times D}",
+    ])
+    st.markdown("Transponiendo para obtener el **gradiente como vector columna** (convención estándar en ML):")
+    st.latex(r"\nabla_\theta L = -2\Phi^\top e = -2\Phi^\top(y - \Phi\theta) \in \mathbb{R}^D")
+    st.caption("Igualando a cero: $\\Phi^\\top\\Phi\\,\\hat\\theta = \\Phi^\\top y$ — las ecuaciones normales de mínimos cuadrados.")
+
+    interactive_header("Visualización del gradiente y las curvas de nivel")
+    lab_task(
+        predict="la flecha del gradiente debería apuntar hacia donde sube más rápido la superficie.",
+        manipulate="elige función y mueve el punto.",
+        verify="observa que la flecha es perpendicular a la curva de nivel local.",
+    )
+    interactive_guide(
+        controls=[
+            ("Función $f$", "elige la superficie a explorar."),
+            ("Punto $x_0, y_0$", "punto donde se calcula el gradiente."),
+        ],
+        procedure="La app evalúa el gradiente en el punto elegido y lo dibuja sobre las curvas de nivel de $f$.",
+        observe="El gradiente (flecha) es siempre perpendicular a la curva de nivel que pasa por ese punto, "
+                "y apunta hacia donde $f$ crece más rápido.",
+    )
+    col1, col2 = lab_columns()
+    with col1:
+        f_choice = st.selectbox(
+            "Función $f(x_1, x_2)$",
+            ["Cuadrática anisotrópica", "Rosenbrock", "Seno 2D"],
+            key="calc_f",
+        )
+        calc_formulas = {
+            "Cuadrática anisotrópica": r"f(x_1,x_2)=x_1^2+5x_2^2",
+            "Rosenbrock": r"f(x_1,x_2)=(1-x_1)^2+10(x_2-x_1^2)^2",
+            "Seno 2D": r"f(x_1,x_2)=\sin(x_1)\cos(x_2)",
+        }
+        st.latex(calc_formulas[f_choice])
+        x0_g = st.slider("$x_1$", -2.0, 2.0, 0.8, step=0.1, key="calc_x0")
+        y0_g = st.slider("$x_2$", -2.0, 2.0, 0.5, step=0.1, key="calc_y0")
+    dx = 1e-5
+    if f_choice.startswith("Cuadrática"):
+        def _fv(x, y): return x**2 + 5*y**2
+    elif f_choice.startswith("Rosenbrock"):
+        def _fv(x, y): return (1-x)**2 + 10*(y - x**2)**2
+    else:
+        def _fv(x, y): return np.sin(x) * np.cos(y)
+    gx = (_fv(x0_g+dx, y0_g) - _fv(x0_g-dx, y0_g)) / (2*dx)
+    gy = (_fv(x0_g, y0_g+dx) - _fv(x0_g, y0_g-dx)) / (2*dx)
+    grad_norm = np.sqrt(gx**2 + gy**2)
+    with col1:
+        metric_grid([
+            ("$f(x_0)$", f"{_fv(x0_g, y0_g):.4f}"),
+            ("$\\partial f/\\partial x_1$", f"{gx:.4f}"),
+            ("$\\partial f/\\partial x_2$", f"{gy:.4f}"),
+            ("$\\|\\nabla f\\|$", f"{grad_norm:.4f}"),
+        ], columns=2)
+    with col2:
+        xg = np.linspace(-2.2, 2.2, 120)
+        yg = np.linspace(-2.2, 2.2, 120)
+        Xg, Yg = np.meshgrid(xg, yg)
+        Zg = _fv(Xg, Yg)
+        fig_g, ax_g = plt.subplots(figsize=(6.5, 4.5))
+        ax_g.contour(Xg, Yg, Zg, levels=20, cmap="viridis")
+        scale = 0.4 / max(grad_norm, 1e-9)
+        ax_g.annotate("", xy=(x0_g + gx*scale, y0_g + gy*scale), xytext=(x0_g, y0_g),
+                      arrowprops=dict(arrowstyle="->", color="#DC2626", lw=2))
+        ax_g.scatter([x0_g], [y0_g], color="#DC2626", s=60, zorder=5)
+        ax_g.set_xlabel("$x_1$"); ax_g.set_ylabel("$x_2$")
+        ax_g.set_title("Curvas de nivel y gradiente (flecha roja)")
+        st.pyplot(fig_g); plt.close(fig_g)
+    how_to_read(
+        "Las curvas de nivel son las 'curvas de igual altitud' de $f$. El gradiente (flecha roja) es siempre perpendicular a ellas "
+        "y apunta hacia las curvas de valor más alto."
+    )
+
+    self_check_header()
+    quiz(
+        "La derivada parcial $\\partial f/\\partial x_i$ mide...",
+        ["El cambio de $f$ en todas las direcciones simultáneamente",
+         "El cambio de $f$ cuando solo $x_i$ varía infinitesimalmente, manteniendo el resto fijo",
+         "La norma del gradiente"],
+        1,
+        "Exactamente: 'parcial' porque solo varía una coordenada a la vez.",
+        "Piensa en seccionar la superficie con un plano paralelo al eje $x_i$.",
+        key="calc_q1"
+    )
+    ai_bridge(
+        "**Backpropagation** es la regla de la cadena aplicada repetidamente hacia atrás en una red neuronal. "
+        "La Hessiana no se calcula explícitamente en redes grandes (es $n^2$ coeficientes), pero "
+        "**Adam** escala actualizaciones usando medias móviles del primer y segundo momento de los gradientes. "
+        "**Batch normalization** normaliza activaciones usando media y varianza del mini-batch. "
+        "**Gradient clipping** acota $\\|\\nabla f\\|$ para evitar explosión de gradientes en RNNs."
+    )
+
+
+# ==================================================================
+# SECCIÓN 20 — CONVEXIDAD
+# ==================================================================
+def sec_convexidad():
+    section_title(
+        "20. Convexidad",
+        "La propiedad que convierte un problema de optimización difícil en uno garantizado."
+    )
+    source_note("Clase7b.pdf, págs. 27-37: conjuntos convexos, funciones convexas, condiciones de primer/segundo orden y ejemplos.")
+    beginner_bridge(
+        "convexidad en una frase",
+        [
+            "Una función convexa tiene forma de bowl: no hay pozos falsos separados del mejor punto.",
+            "Convexo no significa necesariamente único; único requiere convexidad estricta u otros supuestos.",
+            "La Hessiana ayuda a certificar convexidad sólo si es semidefinida positiva en todo el dominio relevante.",
+        ],
+    )
+    motivation(
+        "En optimización general, un mínimo local puede no ser global: el algoritmo puede quedar atrapado. "
+        "La **convexidad** elimina esa trampa: para funciones convexas, todo mínimo local es automáticamente global. "
+        "Muchas pérdidas clásicas en ML son convexas bajo formulaciones adecuadas; con existencia de minimizador, paso apropiado "
+        "y condiciones de rango/regularización, los métodos de primer orden pueden converger a un óptimo global."
+    )
+    prerequisites_box(
+        "- Gradiente $\\nabla f$ y Hessiana $H$ (sección 19).\n"
+        "- Semidefinida positiva: $A \\succeq 0 \\Leftrightarrow x^\\top A x \\geq 0\\ \\forall x$."
+    )
+
+    st.markdown("### Conjuntos convexos")
+    st.latex(r"C \text{ es convexo} \iff \forall\, x,y \in C,\; \theta \in [0,1]:\; \theta x + (1-\theta)y \in C")
+    st.caption("Interpretación: el segmento que une cualquier par de puntos del conjunto está completamente dentro del conjunto.")
+
+    st.markdown("### Funciones convexas")
+    st.latex(r"f(\theta y + (1-\theta)x) \leq \theta f(y) + (1-\theta)f(x) \quad \forall x,y,\; \theta \in [0,1]")
+    plain_language(
+        "En palabras",
+        "La cuerda que une dos puntos del gráfico de $f$ siempre está **por encima** (o encima) de la función. "
+        "La función no tiene 'valles ocultos' entre dos puntos."
+    )
+    insight(
+        "**Teorema clave:** Si $f$ es convexa, todo mínimo local es un mínimo global. "
+        "Si además $f$ es diferenciable y existe un punto con $\\nabla f(x^\\star)=0$, ese punto es óptimo global. "
+        "La unicidad requiere supuestos adicionales."
+    )
+
+    st.markdown("### Condición de primer orden")
+    st.markdown("Si $f$ es diferenciable y convexa, la desigualdad de convexidad se puede escribir con el gradiente:")
+    st.latex(r"f(y) \geq f(x) + \nabla f(x)^\top (y - x) \quad \forall x, y")
+    st.caption("Interpretación: el plano tangente a $f$ en cualquier punto $x$ está **por debajo** (o sobre) la función. La tangente es un soporte global.")
+    with advanced_expander("Demostración de la condición de primer orden"):
+        st.markdown("**($\\Rightarrow$)** Si $f$ es convexa, sea $z = \\theta y + (1-\\theta)x$. Por convexidad:")
+        latex_aligned([
+            r"f(x + \theta(y-x)) \leq (1-\theta)f(x) + \theta f(y)",
+            r"\Rightarrow \frac{f(x + \theta(y-x)) - f(x)}{\theta} \leq f(y) - f(x)",
+        ])
+        st.markdown(
+            "Tomando $\\theta \\to 0^+$, el lado izquierdo converge a $\\nabla f(x)^\\top(y-x)$ "
+            "— la derivada direccional de $f$ en la dirección $(y-x)$, que en dimensión mayor es exactamente "
+            "$\\nabla f(x) \\cdot (y-x)$. Así: $f(y) \\geq f(x) + \\nabla f(x)^\\top(y-x)$."
+        )
+        st.markdown("**($\\Leftarrow$)** Si la condición lineal vale, para $z = \\theta y + (1-\\theta)x$:")
+        latex_aligned([
+            r"f(y) \geq f(z) + \nabla f(z)^\top(y-z)",
+            r"f(x) \geq f(z) + \nabla f(z)^\top(x-z)",
+        ])
+        st.markdown("Multiplicando por $\\theta$ y $1-\\theta$ y sumando: $\\theta f(y) + (1-\\theta)f(x) \\geq f(z)$.")
+
+    st.markdown("### Condición de segundo orden")
+    st.markdown("Si $f$ es dos veces diferenciable:")
+    st.latex(r"f \text{ convexa} \iff \text{Dom}(f) \text{ convexo y } H(x) \succeq 0 \text{ en todo punto}")
+    st.caption("$H \\succeq 0$ (semidefinida positiva): todos los valores propios de la Hessiana son $\\geq 0$. La curvatura es no negativa en todas las direcciones.")
+
+    st.markdown("### Propiedades de cierre")
+    st.markdown(
+        "- **Máximo de convexas:** $\\max_{1 \\leq i \\leq n} f_i(x)$ es convexa si cada $f_i$ lo es.\n"
+        "- **Combinación no-negativa:** $\\sum_i a_i f_i(x)$ con $a_i \\geq 0$ es convexa.\n"
+        "- **Composición afín:** $g(Ax+b)$ es convexa si $g$ es convexa.\n"
+        "- **Normas:** $\\|x\\|$ es convexa para cualquier norma (bola unitaria = conjunto convexo)."
+    )
+
+    worked_example("¿Es $f(x) = (y \\cdot x + b)^2$ convexa en $\\mathbb{R}^D$?")
+    st.markdown("$g(t) = t^2$ es convexa ($g'' = 2 > 0$) y $t = y \\cdot x + b$ es afín en $x$. Por composición afín, $f$ es convexa.")
+    worked_example("¿Es $f(x) = \\ln(1 + e^{-y\\cdot x + b})$ convexa? (pérdida logística)")
+    st.markdown("$g(t) = \\ln(1+e^{-t})$ es convexa ($g'' = \\sigma(t)(1-\\sigma(t)) > 0$) y $t$ es afín. Por composición, la pérdida logística es convexa en $x$.")
+    st.success("Resultado: no hay mínimos locales falsos. La existencia y unicidad del minimizador requieren condiciones adicionales, como regularización o diseño de rango adecuado; si los datos son separables, puede no existir minimizador finito.")
+
+    interactive_header("Visualización: convexa vs no convexa")
+    lab_task(
+        predict="en funciones convexas, la cuerda debería quedar sobre la curva.",
+        manipulate="mueve los puntos a y b y cambia la función.",
+        verify="compara cuerda, tangente y curva para detectar cuándo falla la convexidad.",
+    )
+    interactive_guide(
+        controls=[
+            ("Función", "elige entre funciones convexas y no convexas para ver la diferencia."),
+            ("Punto $a$, Punto $b$", "mueve los dos puntos para ver si la cuerda queda sobre la función."),
+        ],
+        procedure="Se dibujan $f$, la cuerda entre dos puntos, y el plano tangente en $a$.",
+        observe="Para funciones convexas la cuerda siempre queda sobre $f$ y el tangente siempre por debajo. "
+                "Para no convexas, puede haber tramos donde la cuerda corte a la función.",
+    )
+    col1, col2 = lab_columns()
+    with col1:
+        fconv_choice = st.selectbox(
+            "Función",
+            ["Cuadrática convexa", "Exponencial convexa", "Doble pozo no convexo", "Seno no convexo"],
+            key="conv_f",
+        )
+        conv_formulas = {
+            "Cuadrática convexa": r"f(x)=x^2",
+            "Exponencial convexa": r"f(x)=e^x",
+            "Doble pozo no convexo": r"f(x)=x^4-4x^2",
+            "Seno no convexo": r"f(x)=\sin(x)",
+        }
+        st.latex(conv_formulas[fconv_choice])
+        a_cv = st.slider("Punto $a$", -3.0, 3.0, -1.5, step=0.1, key="conv_a")
+        b_cv = st.slider("Punto $b$", -3.0, 3.0, 1.5, step=0.1, key="conv_b")
+    if fconv_choice == "Cuadrática convexa":
+        fconv = lambda x: x**2; fconv_label = r"$x^2$"; is_convex = True
+    elif fconv_choice == "Exponencial convexa":
+        fconv = np.exp; fconv_label = r"$e^x$"; is_convex = True
+    elif fconv_choice == "Doble pozo no convexo":
+        fconv = lambda x: x**4 - 4*x**2; fconv_label = r"$x^4 - 4x^2$"; is_convex = False
+    else:
+        fconv = np.sin; fconv_label = r"$\sin(x)$"; is_convex = False
+    xs_cv = np.linspace(-3.2, 3.2, 300)
+    dx_cv = 1e-6
+    slope_a = (fconv(a_cv+dx_cv) - fconv(a_cv-dx_cv)) / (2*dx_cv)
+    tangent = fconv(a_cv) + slope_a * (xs_cv - a_cv)
+    chord_x = np.array([a_cv, b_cv])
+    chord_y = np.array([fconv(a_cv), fconv(b_cv)])
+    with col1:
+        if is_convex:
+            st.success("Esta función **es convexa**: la cuerda queda sobre $f$ y el tangente por debajo.")
+        else:
+            st.error("Esta función **no es convexa**: hay tramos donde la cuerda corta a $f$.")
+        metric_grid([
+            (f"$f(a)$", f"{fconv(a_cv):.3f}"),
+            (f"$f(b)$", f"{fconv(b_cv):.3f}"),
+            ("Punto medio: $f\\left(\\frac{a+b}{2}\\right)$", f"{fconv((a_cv+b_cv)/2):.3f}"),
+            ("Cuerda en $(a+b)/2$", f"{(fconv(a_cv)+fconv(b_cv))/2:.3f}"),
+        ], columns=2)
+    with col2:
+        fig_cv, ax_cv = plt.subplots(figsize=(7, 4))
+        ax_cv.plot(xs_cv, fconv(xs_cv), color="#4C72B0", lw=2.2, label=fconv_label)
+        ax_cv.plot(chord_x, chord_y, "o--", color="#DD8452", lw=1.8, ms=7, label="Cuerda $[a,b]$")
+        ax_cv.plot(xs_cv, tangent, color="#059669", lw=1.4, ls=":", label=f"Tangente en $a={a_cv:.1f}$")
+        ax_cv.set_xlim(-3.3, 3.3)
+        y_all = np.concatenate([fconv(xs_cv), tangent])
+        ax_cv.set_ylim(np.nanmin(y_all)-0.5, np.nanmax(y_all)+0.5)
+        ax_cv.legend(fontsize=9)
+        st.pyplot(fig_cv); plt.close(fig_cv)
+    how_to_read(
+        "Naranja = cuerda entre $a$ y $b$. Verde punteado = tangente en $a$. "
+        "Función convexa: cuerda sobre la curva, tangente por debajo. "
+        "No convexa: la cuerda puede cortar a la curva."
+    )
+
+    self_check_header()
+    quiz(
+        "¿Por qué la pérdida de regresión logística puede optimizarse con descenso de gradiente hasta el óptimo global?",
+        ["Porque la pérdida logística es cero en el óptimo",
+         "Porque es convexa: todo mínimo local es global",
+         "Porque la Hessiana es la identidad"],
+        1,
+        "Convexidad garantiza que no hay trampas locales: todo mínimo local es global. La convergencia y unicidad requieren condiciones adicionales.",
+        "La convexidad es la propiedad que elimina los mínimos locales no globales.",
+        key="conv_q1"
+    )
+    quiz(
+        "La Hessiana de una función convexa cumple...",
+        ["$H(x) \\preceq 0$ (semidefinida negativa)",
+         "$H(x) \\succeq 0$ (semidefinida positiva)",
+         "$H(x) = I$ (identidad)"],
+        1,
+        "$H \\succeq 0$ significa curvatura no negativa en todas las direcciones — la función no tiene 'valles' locales.",
+        "Semidefinida positiva = todos los valores propios $\\geq 0$.",
+        key="conv_q2"
+    )
+    ai_bridge(
+        "**Regresión lineal** (MSE) y **regresión logística** (BCE) son problemas convexos en formulaciones clásicas; la unicidad depende de rango, regularización y existencia del minimizador. "
+        "**Redes neuronales profundas** son no convexas → múltiples mínimos locales, pero en la práctica "
+        "son suficientemente buenos. **Regularización L2** ($\\lambda\\|\\theta\\|^2$) preserva la convexidad "
+        "cuando el problema original es convexo y puede aportar convexidad estricta en parámetros regularizados."
+    )
+
+
+# ==================================================================
+# SECCIÓN 21 — LEVENBERG-MARQUARDT Y NLS
+# ==================================================================
+def sec_levenberg():
+    section_title(
+        "21. Levenberg-Marquardt y Mínimos Cuadrados No Lineales",
+        "El algoritmo que interpola entre descenso de gradiente y Newton para ajustar modelos complejos."
+    )
+    source_note("Clase7b.pdf, págs. 55-58: mínimos cuadrados lineales/no lineales y Levenberg-Marquardt. La app usa la forma estándar estable con +lambda I.")
+    beginner_bridge(
+        "ajustar una curva",
+        [
+            "Un residuo es dato observado menos predicción: r = y - y_hat.",
+            "Mínimos cuadrados busca parámetros que hagan pequeños esos residuos.",
+            "LM resuelve un sistema lineal en cada iteración; la computadora calcula el paso, no invertimos matrices a mano.",
+        ],
+    )
+    motivation(
+        "Los mínimos cuadrados lineales tienen solución exacta. Pero en ML muchos modelos son no lineales: "
+        "redes neuronales, modelos de crecimiento, series exponenciales. El método de **Levenberg-Marquardt** "
+        "combina la estabilidad del descenso de gradiente con una aproximación tipo Gauss-Newton, y es el optimizador "
+        "detrás de muchos ajustes de curvas en ciencia e ingeniería."
+    )
+    prerequisites_box(
+        "- Jacobiana $J(\\theta)$ (sección 19).\n"
+        "- Descenso de gradiente y Newton (sección 17).\n"
+        "- Mínimos cuadrados: minimizar $\\|y - \\hat y(\\theta)\\|^2$."
+    )
+
+    st.markdown("### Mínimos cuadrados lineales (revisión)")
+    st.markdown(
+        "Dados $m$ puntos $(t_i, y_i)$ y un modelo **lineal** en los parámetros $\\hat y = \\Phi\\theta$, "
+        "minimizar $E(\\theta) = \\|y - \\Phi\\theta\\|^2$ tiene solución cerrada:"
+    )
+    st.latex(r"\Phi^\top\Phi\,\hat\theta = \Phi^\top y \quad \text{(ecuaciones normales)}")
+    st.caption("Si $\\Phi^\\top\\Phi$ es invertible: $\\hat\\theta = (\\Phi^\\top\\Phi)^{-1}\\Phi^\\top y$.")
+
+    st.markdown("### Mínimos cuadrados no lineales (NLS)")
+    st.markdown(
+        "Cuando $\\hat y(\\theta)$ depende **no linealmente** de $\\theta$, no hay solución cerrada. "
+        "Minimizamos $E(\\theta) = \\|y - \\hat y(\\theta)\\|^2$ iterativamente."
+    )
+    st.latex(r"\nabla E = -2 J(\theta)^\top \bigl(y - \hat y(\theta)\bigr) = 0")
+    st.markdown("donde $J(\\theta) = \\partial\\hat y / \\partial\\theta \\in \\mathbb{R}^{m \\times n}$ es la Jacobiana del modelo.")
+
+    st.markdown("### Método Levenberg-Marquardt")
+    plain_language(
+        "La idea: dos extremos y un interpolador",
+        "Si el parámetro de regularización $\\lambda$ es grande, el método se comporta como descenso de gradiente "
+        "(pasos pequeños, estable pero lento). Si $\\lambda \\to 0$, se comporta como Gauss-Newton (pasos grandes, rápido "
+        "pero puede divergir). LM adapta $\\lambda$ automáticamente durante la iteración."
+    )
+    latex_aligned([
+        r"\text{Descenso:}\quad \Delta\theta = s\,J^\top(y - \hat y(\theta))",
+        r"\text{Gauss-Newton:}\quad J^\top J\,\Delta\theta = J^\top(y - \hat y(\theta))",
+        r"\text{Levenberg-Marquardt:}\quad (J^\top J + \lambda I)\,\Delta\theta = J^\top(y - \hat y(\theta))",
+    ])
+    formula_walkthrough(
+        "Por qué funciona la suma $J^\\top J + \\lambda I$",
+        terms={
+            r"J^\top J": "Aproximación de la Hessiana de $E$ (asume residuos pequeños).",
+            r"\lambda I": "Regularización que garantiza que la matriz sea invertible y controla el tamaño del paso.",
+            r"\lambda \to \infty": "El término $\\lambda I$ domina → $\\Delta\\theta \\approx \\frac{1}{\\lambda}J^\\top r$ (gradiente escalado).",
+            r"\lambda \to 0": "$J^\\top J$ domina → iteración de Gauss-Newton (Newton aproximado para mínimos cuadrados).",
+        },
+        steps=[
+            "En cada iteración, LM propone un paso $\\Delta\\theta$ resolviendo el sistema lineal.",
+            "Si el paso reduce $E$, se acepta y $\\lambda$ se reduce (más confianza, más Newton).",
+            "Si el paso no reduce $E$, se rechaza y $\\lambda$ se aumenta (menos confianza, más gradiente).",
+        ],
+        expanded=True,
+    )
+
+    interactive_header("Ajuste de modelo no lineal por LM")
+    lab_task(
+        predict="con poco ruido y suficientes iteraciones, el ajuste naranja debería acercarse a la curva verde.",
+        manipulate="cambia modelo, ruido, lambda inicial e iteraciones.",
+        verify="compara curva inicial, curva ajustada, pérdida y lambda final.",
+    )
+    interactive_guide(
+        controls=[
+            ("Modelo verdadero", "la función que generó los datos."),
+            ("Ruido", "varianza del ruido gaussiano añadido."),
+            ("$\\lambda$ inicial", "parámetro de regularización de LM."),
+            ("Iteraciones", "pasos del optimizador LM."),
+        ],
+        procedure="Se generan datos de un modelo no lineal con ruido, y LM ajusta los parámetros minimizando la suma de cuadrados.",
+        observe="Observa cómo el ajuste mejora con más iteraciones y cómo la pérdida cae. "
+                "Con $\\lambda$ grande el algoritmo es estable pero más lento.",
+    )
+    col1, col2 = lab_columns()
+    with col1:
+        lm_model = st.selectbox(
+            "Modelo verdadero",
+            ["Exponencial decreciente", "Logístico sigmoidal"],
+            key="lm_model",
+        )
+        lm_formulas = {
+            "Exponencial decreciente": r"\hat y(t)=a e^{-bt}",
+            "Logístico sigmoidal": r"\hat y(t)=\frac{L}{1+e^{-k(t-t_0)}}",
+        }
+        st.latex(lm_formulas[lm_model])
+        lm_noise = st.slider("Ruido $\\sigma$", 0.0, 1.0, 0.2, step=0.05, key="lm_noise")
+        lm_lambda = st.slider("$\\lambda$ inicial", 0.001, 10.0, 0.1, step=0.01, key="lm_lambda")
+        lm_iters = st.slider("Iteraciones LM", 1, 50, 20, key="lm_iters")
+        if st.button("Nueva muestra", key="lm_seed_btn"):
+            st.session_state["lm_seed"] = np.random.randint(0, 100000)
+        lm_seed = st.session_state.get("lm_seed", 42)
+
+    rng_lm = np.random.default_rng(lm_seed)
+    t_lm = np.linspace(0, 5, 30)
+    if lm_model.startswith("Exponencial"):
+        a_true, b_true = 3.0, 0.8
+        y_true = a_true * np.exp(-b_true * t_lm)
+        y_obs = y_true + lm_noise * rng_lm.normal(size=len(t_lm))
+        def model_fn(t, theta): return theta[0] * np.exp(-theta[1] * t)
+        def jac_fn(t, theta):
+            J = np.zeros((len(t), 2))
+            J[:, 0] = np.exp(-theta[1] * t)
+            J[:, 1] = -theta[0] * t * np.exp(-theta[1] * t)
+            return J
+        theta0 = np.array([2.0, 0.4])
+        labels = ["a", "b"]
+        true_vals = [a_true, b_true]
+    else:
+        L_true, k_true, t0_true = 5.0, 1.5, 2.5
+        y_true = L_true / (1 + np.exp(-k_true*(t_lm - t0_true)))
+        y_obs = y_true + lm_noise * rng_lm.normal(size=len(t_lm))
+        def model_fn(t, theta): return theta[0] / (1 + np.exp(-theta[1]*(t - theta[2])))
+        def jac_fn(t, theta):
+            L, k, t0 = theta
+            sig = 1 / (1 + np.exp(-k*(t - t0)))
+            J = np.zeros((len(t), 3))
+            J[:, 0] = sig
+            J[:, 1] = L * sig * (1-sig) * (t - t0)
+            J[:, 2] = -L * sig * (1-sig) * k
+            return J
+        theta0 = np.array([3.0, 1.0, 2.0])
+        labels = ["L", "k", "t₀"]
+        true_vals = [L_true, k_true, t0_true]
+
+    theta = theta0.copy()
+    lam = lm_lambda
+    losses_lm = []
+    for _ in range(lm_iters):
+        r = y_obs - model_fn(t_lm, theta)
+        J_lm = jac_fn(t_lm, theta)
+        loss_now = float(np.dot(r, r))
+        losses_lm.append(loss_now)
+        A = J_lm.T @ J_lm + lam * np.eye(len(theta))
+        b_rhs = J_lm.T @ r
+        try:
+            delta = np.linalg.solve(A, b_rhs)
+        except np.linalg.LinAlgError:
+            break
+        theta_new = theta + delta
+        r_new = y_obs - model_fn(t_lm, theta_new)
+        loss_new = float(np.dot(r_new, r_new))
+        if loss_new < loss_now:
+            theta = theta_new; lam = max(lam / 10, 1e-7)
+        else:
+            lam = min(lam * 10, 1e7)
+
+    with col1:
+        for lbl, tv, fitted in zip(labels, true_vals, theta):
+            metric_grid([(f"Verdadero {lbl}", f"{tv:.3f}"), (f"Ajustado {lbl}", f"{fitted:.3f}")], columns=2)
+        st.metric("Pérdida final $E$", f"{losses_lm[-1]:.4f}" if losses_lm else "-")
+        st.metric("λ final", f"{lam:.2e}")
+
+    with col2:
+        t_fine = np.linspace(0, 5, 200)
+        fig_lm, axes_lm = plt.subplots(1, 2, figsize=(10.2, 3.6))
+        axes_lm[0].scatter(t_lm, y_obs, color="#4C72B0", s=22, label="Datos", zorder=5)
+        axes_lm[0].plot(t_fine, model_fn(t_fine, theta0), color="#CBD5E1", lw=1.5, ls="--", label="Inicio")
+        axes_lm[0].plot(t_fine, model_fn(t_fine, theta), color="#DD8452", lw=2, label="LM ajustado")
+        axes_lm[0].plot(t_fine, model_fn(t_fine, np.array(true_vals)), color="#059669", lw=1.5, ls=":", label="Verdadero")
+        axes_lm[0].set_xlabel("t"); axes_lm[0].set_ylabel("y"); axes_lm[0].legend(fontsize=8)
+        axes_lm[0].set_title("Ajuste del modelo")
+        axes_lm[1].semilogy(losses_lm, "o-", color="#4C72B0", ms=3)
+        axes_lm[1].set_xlabel("Iteración LM"); axes_lm[1].set_ylabel("$E(\\theta)$")
+        axes_lm[1].set_title("Convergencia de la pérdida")
+        plt.tight_layout()
+        st.pyplot(fig_lm); plt.close(fig_lm)
+    how_to_read(
+        "Izquierda: gris punteado = parámetros iniciales, naranja = ajuste LM final, verde = verdadero. "
+        "Derecha: curva de pérdida en escala log. Convergencia rápida suele indicar que LM aceptó pasos tipo Gauss-Newton (λ pequeño)."
+    )
+
+    self_check_header()
+    quiz(
+        "¿Qué ocurre cuando $\\lambda \\to 0$ en Levenberg-Marquardt?",
+        ["El algoritmo se convierte en descenso de gradiente puro",
+         "El algoritmo se aproxima al método de Newton-Gauss",
+         "El paso $\\Delta\\theta$ se hace cero"],
+        1,
+        "Con $\\lambda=0$: $(J^\\top J)\\Delta\\theta = J^\\top r$ — las ecuaciones normales de Gauss-Newton.",
+        "La regularización $\\lambda I$ desaparece; queda la aproximación cuadrática de Newton.",
+        key="lm_q1"
+    )
+    ai_bridge(
+        "LM es la base de muchos ajustadores de modelos en **visión por computador** (calibración de cámaras, "
+        "ajuste de poses), **física computacional** y **bioinformática**. En deep learning, "
+        "**K-FAC** (Kronecker-Factored Approximate Curvature) usa una idea similar: aproximar la curvatura "
+        "de la pérdida para dar pasos más inteligentes que SGD puro."
+    )
+
+
 # ==================================================================
 #                   NAVEGACIÓN / SIDEBAR
 # ==================================================================
@@ -3910,7 +5275,11 @@ SECTIONS = {
     "14. Muestras y Testeo Agrupado": sec_samples_pooled,
     "15. Leyes Límite: LLN y CLT": sec_limits,
     "16. Algoritmos Aleatorizados": sec_randomized,
-    "17. Descenso de Gradiente y Backtracking": sec_gradient_backtracking,
+    "17. Descenso de Gradiente, Newton y Backtracking": sec_gradient_backtracking,
+    "18. Método de los Momentos (MoM)": sec_mom,
+    "19. Cálculo Diferencial para IA": sec_calculo,
+    "20. Convexidad": sec_convexidad,
+    "21. Levenberg-Marquardt y NLS": sec_levenberg,
 }
 
 NAV_GROUPS = {
@@ -3940,10 +5309,16 @@ NAV_GROUPS = {
     "Muestras y leyes límite": [
         "14. Muestras y Testeo Agrupado",
         "15. Leyes Límite: LLN y CLT",
+        "18. Método de los Momentos (MoM)",
+    ],
+    "Optimización": [
+        "19. Cálculo Diferencial para IA",
+        "20. Convexidad",
+        "17. Descenso de Gradiente, Newton y Backtracking",
+        "21. Levenberg-Marquardt y NLS",
     ],
     "Aplicaciones algorítmicas": [
         "16. Algoritmos Aleatorizados",
-        "17. Descenso de Gradiente y Backtracking",
     ],
 }
 
