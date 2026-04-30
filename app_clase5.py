@@ -1,4 +1,4 @@
-import streamlit as st
+﻿import streamlit as st
 import streamlit.components.v1 as components
 import numpy as np
 import pandas as pd
@@ -266,7 +266,7 @@ def motivation(text):
     st.markdown(text)
 
 def prerequisites_box(prereqs_md):
-    with st.expander("Prerrequisitos y vocabulario base"):
+    with st.expander("Punto de partida: prerrequisitos y vocabulario", expanded=True):
         st.markdown(prereqs_md)
 
 def how_to_read(text, expanded=False):
@@ -437,25 +437,20 @@ def polish_axes(ax):
 def polish_figure(fig):
     fig.patch.set_facecolor("#FCFCFD")
 
-if not hasattr(st, "_mia_original_pyplot"):
-    st._mia_original_pyplot = st.pyplot
-
-def _styled_pyplot(fig=None, *args, **kwargs):
+def mia_pyplot(fig=None, *args, **kwargs):
     if fig is not None and hasattr(fig, "axes"):
         try:
             polish_axes(fig.axes)
             polish_figure(fig)
         except Exception:
             pass
-    result = st._mia_original_pyplot(fig, *args, **kwargs)
+    result = st.pyplot(fig, *args, **kwargs)
     if fig is not None:
         try:
             plt.close(fig)
         except Exception:
             pass
     return result
-
-st.pyplot = _styled_pyplot
 
 def quiz(question, options, correct_idx, feedback_ok, feedback_wrong, key):
     st.markdown(f"**{question}**")
@@ -595,7 +590,7 @@ def sec_kolmogorov():
             ("Evento B", "elige qué caras pertenecen al evento B."),
         ],
         procedure=(
-            "La app trata cada cara del dado como un resultado elemental con probabilidad $1/6$. "
+            "El laboratorio trata cada cara del dado como un resultado elemental con probabilidad $1/6$. "
             "A partir de los conjuntos elegidos calcula intersección, unión, complemento y sus probabilidades."
         ),
         observe=(
@@ -620,8 +615,9 @@ def sec_kolmogorov():
         else:
             default_a, default_b = [2, 4, 6], [4, 5, 6]
             st.caption("Define A y B como las preguntas que quieras hacer sobre el dado.")
-        event_a = st.multiselect("Caras que cumplen A", faces, default=default_a, key="kolm_event_a")
-        event_b = st.multiselect("Caras que cumplen B", faces, default=default_b, key="kolm_event_b")
+        preset_key = _section_slug(preset)
+        event_a = st.multiselect("Caras que cumplen A", faces, default=default_a, key=f"kolm_event_a_{preset_key}")
+        event_b = st.multiselect("Caras que cumplen B", faces, default=default_b, key=f"kolm_event_b_{preset_key}")
         set_a, set_b = set(event_a), set(event_b)
         inter = sorted(set_a & set_b)
         union = sorted(set_a | set_b)
@@ -681,7 +677,7 @@ def sec_kolmogorov():
         handles = [mpatches.Patch(color=color, label=label) for label, color in color_map.items()]
         ax.legend(handles=handles, ncol=2, loc="upper center", bbox_to_anchor=(0.5, -0.22))
         fig.subplots_adjust(bottom=0.32)
-        st.pyplot(fig)
+        mia_pyplot(fig)
         plt.close(fig)
         st.dataframe(
             pd.DataFrame(
@@ -744,7 +740,7 @@ def sec_kolmogorov():
         ax.set_xticks(x); ax.set_xticklabels(labels)
         ax.set_ylabel("Probabilidad"); ax.set_ylim(0, max(max(emp), max(theoretical)) * 1.3)
         ax.legend()
-        st.pyplot(fig); plt.close(fig)
+        mia_pyplot(fig); plt.close(fig)
     how_to_read("Las barras azules son lo observado en la simulación; las naranjas son lo que predice el modelo teórico. Si subes n, las azules se acercan a las naranjas.")
 
     self_check_header()
@@ -823,6 +819,11 @@ def sec_laplace():
     )
 
     interactive_header("Selector de régimen de conteo")
+    lab_task(
+        predict="decide primero si importan order y replacement antes de mirar la fórmula.",
+        manipulate="cambia el escenario cotidiano y luego ajusta n, k, replacement y order.",
+        verify="revisa si los resultados listados calzan con la interpretación de tu problema.",
+    )
     interactive_guide(
         controls=[
             ("n objetos distintos", "tamaño del conjunto base del que vas a elegir."),
@@ -831,7 +832,7 @@ def sec_laplace():
             ("¿Importa el orden?", "decide si dos elecciones con los mismos elementos pero distinto orden cuentan distinto."),
         ],
         procedure=(
-            "Según esas dos decisiones lógicas, la app selecciona automáticamente el régimen correcto de conteo y, cuando el tamaño lo permite, "
+            "Según esas dos decisiones lógicas, el laboratorio selecciona automáticamente el régimen correcto de conteo y, cuando el tamaño lo permite, "
             "enumera explícitamente algunos resultados posibles."
         ),
         observe=(
@@ -906,6 +907,11 @@ def sec_laplace():
     st.markdown("Con $n=23$ ya da ~50.7%. Contraintuitivo porque uno piensa «365 días, tendrían que ser muchas más personas».")
 
     interactive_header("Cumpleaños compartidos")
+    lab_task(
+        predict="estima si 23 personas deberían quedar por debajo o por encima de 50% antes de mirar la curva.",
+        manipulate="cambia el tamaño del grupo y la cantidad de corridas Monte Carlo.",
+        verify="compara la curva exacta con el punto simulado.",
+    )
     col1, col2 = lab_columns()
     with col1:
         n_people = st.slider("Número de personas", 2, 100, 23, key="bday_n")
@@ -932,7 +938,7 @@ def sec_laplace():
         ax.scatter([n_people], [p_sim], color="#55A868", s=70, zorder=5, label="Monte Carlo")
         ax.set_xlabel("n personas"); ax.set_ylabel("P(al menos 2 comparten cumpleaños)")
         ax.legend()
-        st.pyplot(fig); plt.close(fig)
+        mia_pyplot(fig); plt.close(fig)
     how_to_read("Eje x: cantidad de personas; eje y: probabilidad de coincidencia. Nota cómo cruza 50% alrededor de n=23.")
 
     with advanced_expander("póker y conteos de cartas"):
@@ -1057,14 +1063,14 @@ def sec_condicional():
         controls=[
             ("Tamaño de la población sintética", "determina cuántos casos totales usarás en la tabla."),
             ("P(B)", "proporción de casos que pertenecen al grupo B."),
-            ("P(A|B)", "fracción de casos con A dentro del grupo B."),
-            ("P(A|¬B)", "fracción de casos con A fuera del grupo B."),
+            ("P(A | B)", "fracción de casos con A dentro del grupo B."),
+            ("P(A | no B)", "fracción de casos con A fuera del grupo B."),
         ],
         procedure=(
-            "La app construye una tabla 2×2 consistente con esos parámetros y calcula tanto probabilidades marginales como condicionales."
+            "El laboratorio construye una tabla 2×2 consistente con esos parámetros y calcula tanto probabilidades marginales como condicionales."
         ),
         observe=(
-            "Compara $P(A|B)$ con $P(A)$. Si coinciden, saber que ocurrió $B$ no cambia la probabilidad de $A$; "
+            "Compara $P(A\\mid B)$ con $P(A)$. Si coinciden, saber que ocurrió $B$ no cambia la probabilidad de $A$; "
             "si difieren, hay dependencia."
         ),
     )
@@ -1084,8 +1090,8 @@ def sec_condicional():
         st.caption(f"A = {a_label}. B = {b_label}. Los símbolos son abstractos; el contexto les da significado.")
         pop = st.slider("Tamaño de la población sintética", 1000, 50000, 10000, step=1000, key="cond_pop")
         p_b = st.slider(f"proporción que {b_label}: P(B)", 0.05, 0.95, 0.40, step=0.01, key="cond_pb")
-        p_a_given_b = st.slider(f"entre quienes {b_label}, proporción que {a_label}: P(A|B)", 0.0, 1.0, 0.75, step=0.01, key="cond_pagb")
-        p_a_given_notb = st.slider(f"entre quienes NO {b_label}, proporción que {a_label}: P(A|no B)", 0.0, 1.0, 0.25, step=0.01, key="cond_pagnotb")
+        p_a_given_b = st.slider(f"entre quienes {b_label}, proporción que {a_label}: P(A | B)", 0.0, 1.0, 0.75, step=0.01, key="cond_pagb")
+        p_a_given_notb = st.slider(f"entre quienes NO {b_label}, proporción que {a_label}: P(A | no B)", 0.0, 1.0, 0.25, step=0.01, key="cond_pagnotb")
         n_b = int(round(pop * p_b))
         n_notb = pop - n_b
         n_ab = int(round(n_b * p_a_given_b))
@@ -1097,7 +1103,7 @@ def sec_condicional():
         independence_gap = abs(p_a_given_b - p_a)
         metric_grid([
             ("P(A)", f"{p_a:.3f}"),
-            ("P(A|B)", f"{p_a_given_b:.3f}"),
+            ("P(A | B)", f"{p_a_given_b:.3f}"),
             ("P(B|A)", f"{p_b_given_a:.3f}"),
             ("Cambio al saber B", f"{independence_gap:.3f}"),
         ], columns=2)
@@ -1116,21 +1122,21 @@ def sec_condicional():
             index=[f"A: {a_label}", f"¬A: no {a_label}", "Total"],
         )
         st.dataframe(table, width="stretch")
-        st.caption("Para leer P(A|B), mira la columna B. Para leer P(B|A), mira la fila A: cambian los denominadores.")
+        st.caption("Para leer P(A | B), mira la columna B. Para leer P(B | A), mira la fila A: cambian los denominadores.")
         fig, ax = plt.subplots(figsize=(6.8, 3.2))
         ax.bar(["B", "¬B"], [n_ab / max(n_b, 1), n_a_notb / max(n_notb, 1)], color=["#4C72B0", "#DD8452"])
         ax.axhline(p_a, color="#111827", ls=":", lw=1.6, label=f"P(A)={p_a:.2f}")
         ax.set_ylim(0, 1)
         ax.set_ylabel("Proporción de A dentro de cada grupo")
-        ax.set_title("Comparación entre P(A|B) y P(A|¬B)")
+        ax.set_title("Comparación entre P(A | B) y P(A | no B)")
         ax.legend()
-        st.pyplot(fig)
+        mia_pyplot(fig)
         plt.close(fig)
         st.latex(
             rf"P(A)=\frac{{{n_ab}+{n_a_notb}}}{{{pop}}}={p_a:.3f}, \qquad P(B\mid A)=\frac{{{n_ab}}}{{{n_ab+n_a_notb}}}={p_b_given_a:.3f}"
         )
     how_to_read(
-        "La tabla separa claramente qué universo se usa para cada condicional. La columna B sirve para $P(A|B)$; "
+        "La tabla separa claramente qué universo se usa para cada condicional. La columna B sirve para $P(A\\mid B)$; "
         "la fila A sirve para $P(B|A)$."
     )
 
@@ -1208,7 +1214,7 @@ def sec_condicional():
             ax.text(i, v + 0.02, f"{v:.3f}", ha="center")
         polish_axes(ax)
         polish_figure(fig)
-        st.pyplot(fig); plt.close(fig)
+        mia_pyplot(fig); plt.close(fig)
     how_to_read(
         "La barra azul y la naranja muestran probabilidades de ganar estimadas por simulación. "
         "Cuando sólo queda una puerta disponible para cambiar, la estrategia de cambio recoge casi toda la probabilidad de que tu primera elección haya sido errónea. "
@@ -1217,7 +1223,7 @@ def sec_condicional():
 
     self_check_header()
     quiz(
-        "Si $P(A|B) = P(A)$, entonces...",
+        "Si $P(A\\mid B) = P(A)$, entonces...",
         ["$A$ y $B$ son disjuntos", "$A$ y $B$ son independientes", "$P(A)=P(B)$"],
         1,
         "Esa es la definición de independencia: saber $B$ no cambia la probabilidad de $A$.",
@@ -1355,10 +1361,15 @@ def sec_bayes():
     )
 
     interactive_header("Bayes con frecuencias naturales y análisis paramétrico")
+    lab_task(
+        predict="cuando la prevalence es baja, decide si los false positives pueden superar a los true positives.",
+        manipulate="cambia prevalence, sensitivity, specificity y tamaño poblacional.",
+        verify="lee el posterior mediante conteos: true positives dividido por todos los tests positivos.",
+    )
     interactive_guide(
         controls=[
             ("Prevalencia P(D)", "qué fracción de la población realmente tiene la condición."),
-            ("Sensibilidad P(+|D)", "qué tan a menudo el test detecta correctamente un caso enfermo."),
+            ("Sensitivity P(+ | D)", "qué tan a menudo el test detecta correctamente un caso enfermo."),
             ("Especificidad P(-|¬D)", "qué tan a menudo el test descarta correctamente un caso sano."),
             ("Población de referencia", "cuántos casos concretos usarás para traducir probabilidades a conteos."),
         ],
@@ -1372,8 +1383,8 @@ def sec_bayes():
         ),
     )
     prior = st.slider("prevalencia: proporción realmente enferma P(D)", 0.001, 0.5, 0.01, step=0.001, format="%.3f", key="bay_prior")
-    sens = st.slider("sensibilidad: positivo si hay enfermedad P(+|D)", 0.5, 1.0, 0.99, step=0.01, key="bay_sens")
-    spec = st.slider("especificidad: negativo si no hay enfermedad P(-|no D)", 0.5, 1.0, 0.99, step=0.01, key="bay_spec")
+    sens = st.slider("sensitivity: positive if disease P(+ | D)", 0.5, 1.0, 0.99, step=0.01, key="bay_sens")
+    spec = st.slider("specificity: negative if no disease P(- | no D)", 0.5, 1.0, 0.99, step=0.01, key="bay_spec")
     pop = st.slider("Población de referencia para frecuencias naturales", 1000, 100000, 10000, step=1000, key="bay_pop")
     fpr = 1 - spec
     num = sens * prior
@@ -1419,7 +1430,7 @@ def sec_bayes():
             ax.bar(["Positivos"], [fp], bottom=[tp], color="#DD8452", label="Falsos positivos")
             ax.set_ylabel("Número de casos")
             ax.legend()
-            st.pyplot(fig)
+            mia_pyplot(fig)
             plt.close(fig)
             st.caption("Esta barra muestra sólo los tests positivos. El posterior P(D|+) es la fracción azul dentro de azul+naranja.")
         how_to_read(
@@ -1437,7 +1448,7 @@ def sec_bayes():
         ax.set_ylabel("P(D | +)")
         ax.set_xscale("log")
         ax.legend()
-        st.pyplot(fig)
+        mia_pyplot(fig)
         plt.close(fig)
         st.caption(
             "La curva muestra por qué el valor predictivo positivo es extremadamente sensible a la prevalencia. "
@@ -1547,7 +1558,7 @@ def sec_naive_bayes():
             {"Paso": "3. Sumar evidencia atributo por atributo", "Lectura": "cada atributo empuja el puntaje hacia una clase u otra"},
             {"Paso": "4. Elegir el mayor puntaje", "Lectura": "la clase ganadora es la que mejor explica la observación completa"},
         ]))
-        st.caption("El código no se muestra en la app porque esta sección busca lectura conceptual del modelo, no implementación.")
+        st.caption("El código no se muestra en pantalla porque esta sección busca lectura conceptual del modelo, no implementación.")
     st.markdown("Comparación con sklearn sobre el dataset Wine:")
 
     @st.cache_data
@@ -1602,7 +1613,7 @@ def sec_naive_bayes():
             ("Atributos más influyentes a mostrar", "cuántos atributos con mayor impacto en la decisión quieres inspeccionar."),
         ],
         procedure=(
-            "Para la observación elegida, la app calcula el puntaje logarítmico de cada clase y luego compara atributo por atributo "
+            "Para la observación elegida, el laboratorio calcula el puntaje logarítmico de cada clase y luego compara atributo por atributo "
             "qué términos favorecen a la clase ganadora y cuáles a la segunda mejor."
         ),
         observe=(
@@ -1651,7 +1662,7 @@ def sec_naive_bayes():
         axes[1].set_title("Contribuciones más decisivas")
         axes[1].tick_params(axis="y", labelsize=8)
         plt.tight_layout()
-        st.pyplot(fig)
+        mia_pyplot(fig)
         plt.close(fig)
     contribution_df = pd.DataFrame(
         {
@@ -1677,11 +1688,16 @@ def sec_naive_bayes():
     )
 
     interactive_header("Visualizar frontera con 2 features (Wine)")
+    lab_task(
+        predict="elige dos atributos y anticipa si las regiones coloreadas deberían separar limpiamente las clases.",
+        manipulate="cambia los atributos de los ejes horizontal y vertical.",
+        verify="compara las decision regions con los puntos reales etiquetados.",
+    )
     col1, col2 = lab_columns()
     with col1:
-        feat_x = st.selectbox("Feature X", options=list(range(len(fnames))),
+        feat_x = st.selectbox("Atributo eje horizontal (feature X)", options=list(range(len(fnames))),
                               format_func=lambda i: fnames[i], index=0, key="nb_fx")
-        feat_y = st.selectbox("Feature Y", options=list(range(len(fnames))),
+        feat_y = st.selectbox("Atributo eje vertical (feature Y)", options=list(range(len(fnames))),
                               format_func=lambda i: fnames[i], index=6, key="nb_fy")
         if feat_x == feat_y:
             st.warning("Elige dos atributos distintos para que la frontera 2D sea interpretable.")
@@ -1707,7 +1723,7 @@ def sec_naive_bayes():
             ax.scatter(X2[y2==c, 0], X2[y2==c, 1], label=tnames[c], s=22, edgecolor="k", alpha=0.8)
         ax.set_xlabel(fnames[feat_x]); ax.set_ylabel(fnames[feat_y])
         ax.legend()
-        st.pyplot(fig)
+        mia_pyplot(fig)
     how_to_read("Zonas coloreadas: región donde el clasificador predice cada clase. Puntos: datos reales coloreados por su etiqueta verdadera.")
     st.caption("Esta frontera corresponde a un modelo Naive Bayes reentrenado sólo con estos dos atributos; no es la frontera del modelo completo de 13 atributos proyectada a 2D.")
 
@@ -1820,6 +1836,11 @@ def sec_va_cdf():
     compact_dataframe(pd.DataFrame({"k": vals, "P(X=k)": pmf, "F(k)": np.cumsum(pmf)}))
 
     interactive_header("Probabilidad de intervalos: masa/densidad y CDF en paralelo")
+    lab_task(
+        predict="antes de cambiar la distribución, decide si la probabilidad debería ser suma de barras o área bajo una curva.",
+        manipulate="elige Binomial, Normal o Exponential y mueve los extremos del intervalo.",
+        verify="compara la masa/área destacada con la diferencia de CDF mostrada bajo el gráfico.",
+    )
     st.caption("PMF = masa en puntos; PDF = densidad cuya área da probabilidad; CDF = probabilidad acumulada hasta un valor.")
     real_world_case(
         "leer probabilidades como preguntas concretas",
@@ -1841,7 +1862,7 @@ def sec_va_cdf():
             ("Intervalo [a,b]", "es el rango de valores cuya probabilidad quieres calcular."),
         ],
         procedure=(
-            "La app calcula la probabilidad del intervalo de dos maneras equivalentes: como suma o área en la gráfica de masa/densidad, "
+            "El laboratorio calcula la probabilidad del intervalo de dos maneras equivalentes: como suma o área en la gráfica de masa/densidad, "
             "y como diferencia de valores de la CDF."
         ),
         observe=(
@@ -1853,15 +1874,15 @@ def sec_va_cdf():
     with col1:
         dist_type = st.radio("Distribución", ["Binomial (discreta)", "Normal (continua)", "Exponencial (continua)"], key="cdf_kind")
         if dist_type.startswith("Binomial"):
-            n = st.slider("n", 5, 40, 20, key="cdf_bin_n")
-            p = st.slider("p", 0.05, 0.95, 0.40, step=0.05, key="cdf_bin_p")
+            n = st.slider("número de intentos n", 5, 40, 20, key="cdf_bin_n")
+            p = st.slider("probabilidad de éxito p", 0.05, 0.95, 0.40, step=0.05, key="cdf_bin_p")
             a_bin, b_bin = st.slider("rango de valores que quieres contar [a,b]", 0, n, (6, 10), key="cdf_bin_int")
         elif dist_type.startswith("Normal"):
-            mu = st.slider("μ", -3.0, 3.0, 0.0, step=0.1, key="cdf_norm_mu")
-            sig = st.slider("σ", 0.2, 3.0, 1.0, step=0.1, key="cdf_norm_sig")
+            mu = st.slider("media μ", -3.0, 3.0, 0.0, step=0.1, key="cdf_norm_mu")
+            sig = st.slider("desviación estándar σ", 0.2, 3.0, 1.0, step=0.1, key="cdf_norm_sig")
             a_cont, b_cont = st.slider("rango de valores que quieres medir [a,b]", mu - 4 * sig, mu + 4 * sig, (mu - sig, mu + sig), key="cdf_norm_int")
         else:
-            lam = st.slider("λ", 0.2, 3.0, 1.0, step=0.1, key="cdf_exp_lam")
+            lam = st.slider("tasa λ", 0.2, 3.0, 1.0, step=0.1, key="cdf_exp_lam")
             a_cont, b_cont = st.slider("rango de valores que quieres medir [a,b]", 0.0, 8.0 / lam, (0.5 / lam, 2.0 / lam), key="cdf_exp_int")
     with col2:
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10.4, 3.6))
@@ -1897,8 +1918,6 @@ def sec_va_cdf():
             ax2.axvline(a_cont, color="gray", ls=":")
             ax2.axvline(b_cont, color="gray", ls=":")
             ax2.set_title("CDF")
-            ax2.annotate("F(b)-F(a-1)", xy=(b_bin, stats.binom.cdf(b_bin, n, p)), xytext=(b_bin, min(1, stats.binom.cdf(b_bin, n, p)+0.15)),
-                         arrowprops=dict(arrowstyle="->", color="#334155"), fontsize=9)
             st.metric("Probabilidad dentro del rango", f"{interval_prob:.4f}")
             st.latex(rf"P({a_cont:.2f}\le X \le {b_cont:.2f})=F({b_cont:.2f})-F({a_cont:.2f})={interval_prob:.4f}")
             ax2.annotate("diferencia vertical = probabilidad", xy=(b_cont, stats.norm.cdf(b_cont, mu, sig)), xytext=(a_cont, 0.78),
@@ -1923,7 +1942,7 @@ def sec_va_cdf():
         ax1.set_ylabel("PMF/PDF")
         ax2.set_ylabel("F(x)")
         plt.tight_layout()
-        st.pyplot(fig)
+        mia_pyplot(fig)
         plt.close(fig)
     how_to_read(
         "En la figura izquierda se marca la masa o el área del intervalo consultado. La figura derecha muestra "
@@ -2034,7 +2053,7 @@ def sec_distribuciones():
             ax.set_xlabel("x defectuosos en la muestra")
             ax.set_ylabel("P(X=x)")
             ax.set_title(f"Hipergeom(N={N_h}, K={K_h}, n={n_hyp})")
-            st.pyplot(fig); plt.close(fig)
+            mia_pyplot(fig); plt.close(fig)
         st.metric("E[X]", f"{n_hyp*K_h/N_h:.3f}")
 
     with tabs[1]:
@@ -2076,7 +2095,7 @@ def sec_distribuciones():
             ax.hist(x_inv, bins=35, density=True, color="#4C72B0", alpha=0.65, label="muestras")
             ax.plot(x_grid, pdf_grid, color="#DD8452", lw=2, label="densidad teórica")
             ax.legend()
-            st.pyplot(fig); plt.close(fig)
+            mia_pyplot(fig); plt.close(fig)
         st.latex(formula_inv)
 
     with tabs[2]:
@@ -2099,7 +2118,7 @@ def sec_distribuciones():
         ax.plot(ks, poi_pmf, "o-", color="#DD8452", label="Poisson (λ=np)")
         ax.plot(xs, nor_pdf, color="#55A868", lw=2, label="Normal (aprox)")
         ax.set_xlim(0, max(2*n*p + 3, 15)); ax.legend()
-        st.pyplot(fig); plt.close(fig)
+        mia_pyplot(fig); plt.close(fig)
         st.caption("La curva normal es continua y aproxima masas discretas con ancho aproximado 1; para cálculo fino se usa corrección de continuidad.")
         how_to_read("Cuando $n$ crece y $p$ es chica, Poisson pega el punto discreto. Cuando $np(1-p)$ es suficientemente grande, la curva Normal alinea su perfil con la Binomial.")
 
@@ -2125,7 +2144,7 @@ def sec_distribuciones():
                 ("Parámetros", "controlan ubicación, dispersión, asimetría o escala según la familia."),
             ],
             procedure=(
-                "La app dibuja la PMF o la PDF de la familia elegida con los parámetros seleccionados."
+                "El laboratorio dibuja la PMF o la PDF de la familia elegida con los parámetros seleccionados."
             ),
             observe=(
                 "Pregunta siempre qué cambia al mover cada parámetro: si desplaza la distribución, si la vuelve más dispersa, "
@@ -2194,7 +2213,7 @@ def sec_distribuciones():
                 ax.plot(xs, pmf, color="#4C72B0")
                 ax.set_ylabel("f(x)")
             ax.set_title(dist)
-            st.pyplot(fig); plt.close(fig)
+            mia_pyplot(fig); plt.close(fig)
             lab_note("observa si al mover parámetros la distribución se desplaza, se concentra, se aplana o cambia sus colas.")
 
     self_check_header()
@@ -2295,6 +2314,11 @@ def sec_mle():
     st.info("Eso es *exactamente* la **binary cross-entropy loss**. No son dos funciones distintas: minimizar BCE = MLE de Bernoulli.")
 
     interactive_header("Superficie de log-verosimilitud (Bernoulli)")
+    lab_task(
+        predict="el maximum likelihood estimate debería quedar en la tasa observada de éxitos k/n.",
+        manipulate="cambia el tamaño muestral n y el porcentaje de éxitos observado.",
+        verify="revisa que el máximo de la log-likelihood quede en el MLE.",
+    )
     interactive_guide(
         controls=[
             ("n lanzamientos", "cantidad total de observaciones Bernoulli disponibles."),
@@ -2323,11 +2347,16 @@ def sec_mle():
         ax.axvline(k/n, color="#DD8452", ls="--", label=f"$\\hat p={k/n:.2f}$")
         ax.set_xlabel("p"); ax.set_ylabel("log-verosimilitud")
         ax.legend()
-        st.pyplot(fig); plt.close(fig)
+        mia_pyplot(fig); plt.close(fig)
     how_to_read("La curva es cóncava con un único máximo — ese máximo es $\\hat p$. Más datos → pico más estrecho → mayor certeza.")
     lab_note("los datos quedan fijos; lo que cambia sobre el eje horizontal es el parámetro p. Más alto significa que ese p explica mejor esos datos.")
 
     interactive_header("Cómo castiga la entropía cruzada una predicción")
+    lab_task(
+        predict="una predicción equivocada y segura debería producir una loss mucho mayor que una predicción incierta.",
+        manipulate="cambia la etiqueta verdadera y mueve la probabilidad predicha q.",
+        verify="lee el punto negro sobre la curva de BCE.",
+    )
     real_world_case(
         "clasificar un correo como spam",
         "Supón que clase 1 significa `spam` y clase 0 significa `no spam`. El modelo entrega `q`, su confianza de que el correo sea spam. "
@@ -2368,7 +2397,7 @@ def sec_mle():
         ax.set_xlabel("q = P(y=1|x)")
         ax.set_ylabel("BCE")
         ax.legend()
-        st.pyplot(fig)
+        mia_pyplot(fig)
         plt.close(fig)
     how_to_read(
         "Cuando el modelo está seguro y se equivoca, la pérdida crece abruptamente. En cambio, una predicción segura y correcta tiene pérdida cercana a 0."
@@ -2517,7 +2546,7 @@ def sec_esperanza_jensen():
         ax.axhline(EfX, color="#55A868", ls="--", label=f"E[f(X)]={EfX:.2f}")
         ax.axvline(empirical_EX, color="gray", ls=":", alpha=0.5)
         ax.legend(); ax.set_xlabel("x")
-        st.pyplot(fig); plt.close(fig)
+        mia_pyplot(fig); plt.close(fig)
         lab_note("compara el punto naranja f(E[X]) con la línea verde E[f(X)]; la distancia vertical entre ambos es la brecha de Jensen.")
 
     self_check_header()
@@ -2715,7 +2744,7 @@ def sec_fgm_cov():
             ax.set_ylabel("Y")
             emp_rho = np.corrcoef(X.T)[0, 1]
             ax.set_title(f"ρ teórica={rho:.2f}, ρ empírica={emp_rho:.2f}")
-            st.pyplot(fig)
+            mia_pyplot(fig)
             plt.close(fig)
         how_to_read("Cuando la nube se alinea sobre una recta ascendente o descendente, la correlación captura bien la estructura.")
     with tabs[1]:
@@ -2748,7 +2777,7 @@ def sec_fgm_cov():
             ax.set_xlabel("X")
             ax.set_ylabel("Y")
             ax.set_title(f"cov={emp_cov:.3f}, ρ={emp_rho:.3f}")
-            st.pyplot(fig)
+            mia_pyplot(fig)
             plt.close(fig)
             st.caption(
                 "Aquí hay dependencia visible aunque la correlación pueda quedar cerca de cero. "
@@ -2769,12 +2798,6 @@ def sec_fgm_cov():
         "Gaussiana multivariada. En deep learning, **batch normalization** normaliza activaciones por media "
         "y desviación estándar de mini-batch; no elimina covarianzas completas como un whitening estricto."
     )
-    minimum_takeaway(
-        "La FGM resume momentos; la covarianza/correlación resumen dependencia lineal.",
-        "Cuando necesito calcular momentos o detectar relaciones lineales entre variables.",
-        "No debo concluir independencia sólo porque la correlación sea cero, salvo bajo supuestos especiales como gaussianidad conjunta.",
-    )
-
 # ==================================================================
 # SECCIÓN 11 — GAUSSIANA MULTIVARIADA Y PCA
 # ==================================================================
@@ -2875,7 +2898,7 @@ def sec_pca():
         ax.set_aspect("equal")
         ax.set_title("Densidad: elipse de una gaussiana bivariada")
         fig.colorbar(cf, ax=ax, shrink=0.82, label="densidad")
-        st.pyplot(fig); plt.close(fig)
+        mia_pyplot(fig); plt.close(fig)
     how_to_read("Las flechas rojas son los **autovectores** de Σ (ejes de la elipse), con longitudes proporcionales a $\\sqrt{\\lambda_i}$.")
     st.caption(f"Σ={np.round(Sigma,2).tolist()}, autovalores={np.round(eigvals,2).tolist()}. σ₁ y σ₂ son dispersiones marginales; los ejes principales reales son las flechas rojas.")
 
@@ -2927,7 +2950,7 @@ def sec_pca():
             v = Vt[i] * np.sqrt(var_explained[i]) * 2
             ax.plot([0, v[0]], [0, v[1]], lw=3, label=f"PC{i+1} var={var_explained[i]:.2f}")
         ax.set_aspect("equal"); ax.legend()
-        st.pyplot(fig); plt.close(fig)
+        mia_pyplot(fig); plt.close(fig)
     how_to_read("PC1 apunta en la dirección de máxima varianza. Si los datos están muy estirados en una dirección, PC1 la recupera.")
     st.caption("PC1 es la dirección donde los datos varían más; PC2 es la segunda dirección, perpendicular a PC1.")
 
@@ -2965,7 +2988,7 @@ def sec_pca():
         axes[1].set_ylabel("PC2")
         axes[1].set_title("proyección 2D")
         plt.tight_layout()
-        st.pyplot(fig); plt.close(fig)
+        mia_pyplot(fig); plt.close(fig)
     st.dataframe(
         pd.DataFrame({"PC": np.arange(1, len(evr_nb) + 1), "explained_variance_ratio": np.round(evr_nb, 5)}),
         hide_index=True,
@@ -3048,7 +3071,12 @@ def sec_curse():
         "en **10D**, 0.25%; en **20D**, $2\\times 10^{-8}$. *Casi todo el volumen del hipercubo está en las esquinas.*"
     )
 
-    interactive_header("Simulación: ¿cuántos puntos aleatorios caen en la esfera?")
+    interactive_header("Curse of dimensionality: volume collapse and distance concentration")
+    lab_task(
+        predict="al crecer la dimensión, deberían caer menos puntos cerca del centro y las distancias nearest/farthest deberían distinguirse peor.",
+        manipulate="cambia la dimensión, el tamaño muestral y el radio usado para definir un local neighborhood.",
+        verify="compara la curva de volume ratio con el histograma de distancias y el nearest-neighbor contrast.",
+    )
     real_world_case(
         "búsqueda por similitud en muchos atributos",
         "Imagina que cada punto es un usuario descrito por muchas variables: edad, gasto, frecuencia de compra, categorías vistas, etc. "
@@ -3062,40 +3090,66 @@ def sec_curse():
     )
     interactive_guide(
         controls=[
-            ("dimensión", "elige en cuántas dimensiones vives dentro del hipercubo y la esfera."),
-            ("# puntos", "cantidad de puntos uniformes generados en el cubo."),
+            ("dimensión d", "número de coordenadas o features usadas para describir cada punto."),
+            ("tamaño muestral n", "número de puntos simulados."),
+            ("radio local", "umbral de distancia usado para preguntar si un punto está cerca de la query."),
         ],
         procedure=(
-            "La app genera puntos uniformes en el cubo $[-1,1]^d$ y cuenta qué fracción cae dentro de la esfera unitaria, "
-            "es decir, satisface $x_1^2+\\cdots+x_d^2\\le 1$."
+            "The lab samples points uniformly in the unit hypercube $[0,1]^d$, measures distances to the center query, "
+            "and compares that empirical distance profile with the theoretical sphere/cube volume ratio."
         ),
         observe=(
-            "Incluso con muchos puntos, la proporción de aciertos cae muy rápido al aumentar la dimensión. "
-            "Eso visualiza por qué la intuición geométrica de 2D y 3D deja de funcionar en alta dimensión."
+            "The important ML signal is not only that central volume disappears; distances also compress into a narrow band. "
+            "When nearest and farthest points look similarly far away, distance-based methods need better representations."
         ),
     )
     col1, col2 = st.columns([1, 2])
     with col1:
-        d_sim = st.slider("dimensión d", 1, 20, 5, key="curse_d")
-        n_sim = st.slider("cantidad de puntos simulados", 1000, 50000, 10000, step=1000, key="curse_n")
+        d_sim = st.slider("dimensión d", 1, 100, 10, key="curse_d")
+        n_sim = st.slider("puntos simulados n", 1000, 30000, 8000, step=1000, key="curse_n")
+        local_radius = st.slider("radio local", 0.05, 1.50, 0.50, step=0.05, key="curse_radius")
     rng = np.random.default_rng(3)
-    pts = rng.uniform(-1, 1, size=(n_sim, d_sim))
-    inside = (np.sum(pts**2, axis=1) <= 1).mean()
+    pts = rng.uniform(0, 1, size=(n_sim, d_sim))
+    center = np.full(d_sim, 0.5)
+    distances = np.linalg.norm(pts - center, axis=1)
+    inside_local = np.mean(distances <= local_radius)
+    nearest = float(np.min(distances))
+    median_dist = float(np.median(distances))
+    farthest = float(np.max(distances))
+    contrast = (farthest - nearest) / nearest if nearest > 0 else np.inf
     with col2:
-        fig, ax = plt.subplots(figsize=(7, 3.2))
-        ds = np.arange(1, 21)
+        metric_grid([
+            ("dentro del radio local", f"{inside_local:.4f}"),
+            ("nearest distance", f"{nearest:.3f}"),
+            ("median distance", f"{median_dist:.3f}"),
+            ("relative contrast", f"{contrast:.3f}"),
+        ], columns=4)
+        fig, axes = plt.subplots(1, 2, figsize=(10.2, 3.6))
+        ds = np.arange(1, 51)
         rr = [np.exp((d/2)*np.log(np.pi) - gammaln(d/2+1)) / (2.0**d) for d in ds]
-        ax.plot(ds, rr, "o-", color="#4C72B0", label="teórico")
-        ax.scatter([d_sim], [inside], color="#DD8452", s=80, zorder=5, label=f"sim d={d_sim}: {inside:.4f}")
-        ax.set_yscale("log"); ax.set_xlabel("dimensión d"); ax.set_ylabel("fracción del cubo que ocupa la esfera (log)")
-        ax.legend()
-        st.pyplot(fig); plt.close(fig)
+        axes[0].plot(ds, rr, "o-", color="#4C72B0", label="sphere/cube ratio")
+        if d_sim <= 50:
+            log_vs = (d_sim/2)*np.log(np.pi) - gammaln(d_sim/2+1)
+            ratio_d = np.exp(log_vs) / (2.0**d_sim)
+            axes[0].scatter([d_sim], [ratio_d], color="#DD8452", s=80, zorder=5, label=f"d={d_sim}: {ratio_d:.2e}")
+        axes[0].set_yscale("log")
+        axes[0].set_xlabel("dimensión d")
+        axes[0].set_ylabel("central volume ratio (log)")
+        axes[0].legend(fontsize=8)
+        axes[1].hist(distances, bins=40, color="#4C72B0", alpha=0.72)
+        axes[1].axvline(nearest, color="#059669", ls="--", label="nearest")
+        axes[1].axvline(median_dist, color="#111827", ls=":", label="median")
+        axes[1].axvline(local_radius, color="#DD8452", ls="-.", label="radio local")
+        axes[1].set_xlabel("distancia a la query central")
+        axes[1].set_ylabel("conteo")
+        axes[1].legend(fontsize=8)
+        plt.tight_layout()
+        mia_pyplot(fig); plt.close(fig)
     how_to_read(
-        "La escala vertical es logarítmica porque la razón cae extremadamente rápido. "
-        "El punto destacado muestra la estimación por simulación para la dimensión elegida y debe alinearse con la curva teórica."
+        "Izquierda: la curva en escala log muestra qué tan rápido desaparece el volumen central. Derecha: el histograma muestra distancias "
+        "desde los puntos simulados hasta la query central. Si el histograma se estrecha y queda lejos de cero, separar 'near' y 'far' se vuelve más difícil."
     )
-    lab_note("en escala logarítmica, cada bajada representa una pérdida multiplicativa grande; en alta dimensión, casi ningún punto cae cerca del centro.")
-
+    lab_note("relative contrast = (farthest - nearest) / nearest. Mientras más bajo, menos señal discriminativa queda en la nearest-neighbor distance.")
     st.markdown("### Consecuencias para ML")
     st.markdown(
         "1. **Distancias se uniformizan**: en alta $d$, $\\max\\|x_i-x_j\\| \\approx \\min\\|x_i-x_j\\|$, "
@@ -3263,7 +3317,7 @@ def sec_concentration():
         ax.axhline(delta, ls=":", color="gray", label=f"δ={delta}")
         ax.set_yscale("log"); ax.set_xlabel("n"); ax.set_ylabel("garantía superior: P(error ≥ ε)")
         ax.legend()
-        st.pyplot(fig); plt.close(fig)
+        mia_pyplot(fig); plt.close(fig)
     how_to_read("Hoeffding (azul) decae exponencialmente, Chebyshev (naranja) sólo polinomialmente. Misma ε, Hoeffding necesita muchas menos muestras.")
     lab_note("estas curvas son garantías pesimistas: valores más bajos no son más 'verdaderos', sólo cotas superiores más informativas.")
 
@@ -3323,7 +3377,7 @@ def sec_concentration():
         axes[1].set_ylabel("P(|X̄−μ| ≥ ε)")
         axes[1].set_title("Comparación de probabilidades")
         plt.tight_layout()
-        st.pyplot(fig)
+        mia_pyplot(fig)
         plt.close(fig)
     metric_grid([
         ("Probabilidad empírica", f"{empirical_tail:.4f}"),
@@ -3461,7 +3515,7 @@ def sec_samples_pooled():
             ("personas a testear N", "cantidad total de muestras que deseas testear."),
         ],
         procedure=(
-            "Para cada tamaño de grupo $k$, la app calcula el número esperado total de tests: un test inicial por grupo "
+            "Para cada tamaño de grupo $k$, el laboratorio calcula el número esperado total de tests: un test inicial por grupo "
             "más los tests individuales adicionales cuando un grupo sale positivo."
         ),
         observe=(
@@ -3489,7 +3543,7 @@ def sec_samples_pooled():
         ax.scatter([k_opt], [EZ.min()], s=80, color="#DD8452", zorder=5)
         ax.set_xlabel("personas por grupo k"); ax.set_ylabel("número esperado de tests")
         ax.legend()
-        st.pyplot(fig); plt.close(fig)
+        mia_pyplot(fig); plt.close(fig)
         ahorro = 100 * (1 - EZ.min() / N_slider)
         metric_grid([
             ("k óptimo", f"{k_opt}"),
@@ -3654,9 +3708,14 @@ def sec_limits():
         manipulate="cambia distribución generadora, n y número de repeticiones.",
         verify="mira por separado estabilidad del promedio (LLN) y forma del error estandarizado (CLT).",
     )
-    tabs = st.tabs(["LLN (trayectorias)", "CLT (histograma de promedios)"])
+    limit_view = st.radio(
+        "Vista",
+        ["LLN trajectories (trayectorias)", "CLT histogram (histograma de promedios)"],
+        horizontal=True,
+        key="limits_view",
+    )
     rng = np.random.default_rng(7)
-    with tabs[0]:
+    if limit_view.startswith("LLN"):
         col1, col2 = st.columns([1, 2])
         with col1:
             dist_name = st.radio("Distribución generadora", ["Bernoulli(0.3)", "Exponencial(1)", "Uniforme(0,1)"], key="lln_dist")
@@ -3676,9 +3735,9 @@ def sec_limits():
             ax.axhline(mu_true, color="red", ls="--", label=f"μ={mu_true}")
             ax.set_xscale("log"); ax.set_xlabel("n"); ax.set_ylabel("X̄_n")
             ax.legend()
-            st.pyplot(fig); plt.close(fig)
+            mia_pyplot(fig); plt.close(fig)
         how_to_read("Cada línea es una trayectoria distinta. Todas convergen al valor rojo μ conforme n crece. La dispersión baja como $1/\\sqrt n$.")
-    with tabs[1]:
+    else:
         col1, col2 = st.columns([1, 2])
         with col1:
             dist2 = st.radio("Distribución generadora", ["Exponencial(1)", "Uniforme(0,1)", "Bernoulli(0.5)"], key="clt_dist")
@@ -3698,10 +3757,15 @@ def sec_limits():
             xs = np.linspace(-4, 4, 200)
             ax.plot(xs, stats.norm.pdf(xs), color="red", lw=2, label="N(0,1)")
             ax.legend(); ax.set_xlim(-4, 4)
-            st.pyplot(fig); plt.close(fig)
+            mia_pyplot(fig); plt.close(fig)
         how_to_read("Aunque la distribución original sea sesgada (Exponencial) o discreta (Bernoulli), el histograma del promedio estandarizado se parece a la campana estándar cuando n crece.")
 
     interactive_header("Cobertura de intervalos construidos con CLT")
+    lab_task(
+        predict="con n más grande, la empirical coverage debería acercarse a 95%.",
+        manipulate="cambia la distribución generadora, el tamaño muestral y la cantidad de intervalos simulados.",
+        verify="cuenta cuántos intervalos cubren la media verdadera y compara la fracción con 0.95.",
+    )
     interactive_guide(
         controls=[
             ("Distribución para intervalos", "elige la distribución original de donde salen las muestras."),
@@ -3709,7 +3773,7 @@ def sec_limits():
             ("Número de intervalos simulados", "cuántos intervalos independientes quieres generar."),
         ],
         procedure=(
-            "Para cada muestra, la app construye un intervalo del 95% usando la aproximación del CLT y verifica si contiene o no la media verdadera."
+            "Para cada muestra, el laboratorio construye un intervalo del 95% usando la aproximación del CLT y verifica si contiene o no la media verdadera."
         ),
         observe=(
             "Cada línea representa un intervalo distinto. Si la aproximación es buena, la fracción de intervalos que contienen la media verdadera debería acercarse a 0.95."
@@ -3743,7 +3807,7 @@ def sec_limits():
         ax.set_xlabel("Intervalo al 95% vía CLT")
         ax.set_ylabel("Índice de muestra")
         ax.legend()
-        st.pyplot(fig)
+        mia_pyplot(fig)
         plt.close(fig)
     st.metric("Fracción de intervalos que atraparon la media", f"{covered.mean():.3f}")
     st.caption(
@@ -3775,12 +3839,6 @@ def sec_limits():
         "Por eso batches más grandes suelen dar updates más estables. **Bootstrap** usa LLN para "
         "estimar distribuciones de estadísticos. **Intervalos de confianza** al $95\\%$ → directamente del CLT ($\\pm 1.96 \\sigma/\\sqrt n$)."
     )
-    minimum_takeaway(
-        "LLN estabiliza promedios; CLT describe la forma aproximada del error de esos promedios.",
-        "Cuando quiero justificar estimadores, intervalos de confianza o simulaciones Monte Carlo.",
-        "No debo concluir que todo entrenamiento iterativo converge ni que la normalidad sea exacta para n pequeño.",
-    )
-
 # ==================================================================
 # SECCIÓN 16 — ALGORITMOS ALEATORIZADOS
 # ==================================================================
@@ -3908,7 +3966,7 @@ def sec_randomized():
         ax.set_xlabel("tamaño del conjunto candidato |C|")
         ax.set_ylabel("frecuencia")
         ax.legend()
-        st.pyplot(fig); plt.close(fig)
+        mia_pyplot(fig); plt.close(fig)
     metric_grid([
         ("fallo empírico", f"{fail_rate:.3f}"),
         ("cota n^(-1/4)", f"{n_med**(-0.25):.3f}"),
@@ -3926,7 +3984,7 @@ def sec_randomized():
             ("Entrada", "elige si el arreglo inicial será aleatorio o ya ordenado."),
         ],
         procedure=(
-            "La app ejecuta una versión determinista de Quicksort y otra con pivote aleatorio sobre la misma entrada, y cuenta comparaciones."
+            "El laboratorio ejecuta una versión determinista de Quicksort y otra con pivote aleatorio sobre la misma entrada, y cuenta comparaciones."
         ),
         observe=(
             "La comparación importante no es sólo quién gana en un caso puntual, sino cómo cambia el costo cuando la entrada es adversarial para el pivote fijo."
@@ -3960,7 +4018,12 @@ def sec_randomized():
                 continue
             idx = int(rng.integers(len(cur)))
             pivot = cur[idx]
-            rest = np.delete(cur, idx)
+            if idx == 0:
+                rest = cur[1:]
+            elif idx == len(cur) - 1:
+                rest = cur[:-1]
+            else:
+                rest = np.concatenate((cur[:idx], cur[idx + 1:]))
             comps += len(rest)
             left = rest[rest < pivot]; right = rest[rest >= pivot]
             stack.append(left); stack.append(right)
@@ -3982,11 +4045,16 @@ def sec_randomized():
         for i, v in enumerate([c_det, c_rand]):
             ax.text(i, v, f"{v:,}", ha="center", va="bottom")
         ax.set_title("Comparaciones para ordenar la lista")
-        st.pyplot(fig)
+        mia_pyplot(fig)
         st.caption(f"Referencia: n·log₂(n) ≈ {n_bench*math.log2(n_bench):.0f}; n² = {n_bench**2:,}. n log n crece de forma manejable; n² crece mucho más rápido.")
     how_to_read("Con entrada ordenada, determinista explota a $O(n^2)$. Aleatorizado se mantiene cerca de $n\\log n$ en esperanza.")
 
     interactive_header("Variabilidad del costo de Quicksort aleatorizado")
+    lab_task(
+        predict="los random pivots deberían mantenerse cerca de n log n incluso cuando el orden de entrada es adversarial para un pivote fijo.",
+        manipulate="cambia tamaño de lista, número de corridas y tipo de entrada.",
+        verify="lee la dispersión del histograma y compara el costo típico con la referencia n log n.",
+    )
     col1, col2 = st.columns([1, 2])
     with col1:
         n_runs = st.slider("Número de corridas", 20, 400, 120, step=20, key="qs_runs")
@@ -4014,7 +4082,7 @@ def sec_randomized():
         ax.set_xlabel("# comparaciones")
         ax.set_ylabel("Frecuencia")
         ax.legend()
-        st.pyplot(fig)
+        mia_pyplot(fig)
         plt.close(fig)
     st.caption(
         "El costo aleatorizado es una variable aleatoria: no toma siempre el mismo valor, pero su escala típica se mantiene cerca de $n\\log n$."
@@ -4179,7 +4247,7 @@ def sec_gradient_backtracking():
         ax.set_ylabel("y")
         ax.set_title("Trayectoria de descenso")
         ax.legend()
-        st.pyplot(fig); plt.close(fig)
+        mia_pyplot(fig); plt.close(fig)
     how_to_read("La trayectoria naranja muestra los parámetros. Si el paso es grande respecto de la curvatura, aparece oscilación.")
     lab_note("cada punto naranja es una iteración sucesiva; el punto negro es el mínimo de la pérdida.")
 
@@ -4260,7 +4328,7 @@ def sec_gradient_backtracking():
         axes[1].set_ylabel("γ")
         axes[1].set_ylim(0, max(bt_steps) * 1.15 if bt_steps else 1)
         plt.tight_layout()
-        st.pyplot(fig); plt.close(fig)
+        mia_pyplot(fig); plt.close(fig)
         with st.expander("Últimas iteraciones aceptadas", expanded=False):
             compact_dataframe(pd.DataFrame({
                 "iteración": np.arange(len(bt_values)),
@@ -4333,11 +4401,12 @@ def sec_gradient_backtracking():
         axes2[0].scatter([0], [0], color="black", s=30, zorder=5)
         axes2[0].set_title(f"Trayectoria — {algo}")
         axes2[0].set_xlabel("$x_1$"); axes2[0].set_ylabel("$x_2$")
-        axes2[1].semilogy(losses_cmp, "o-", color="#4C72B0", ms=3)
+        losses_cmp_plot = np.maximum(np.asarray(losses_cmp, dtype=float), np.finfo(float).tiny)
+        axes2[1].semilogy(losses_cmp_plot, "o-", color="#4C72B0", ms=3)
         axes2[1].set_xlabel("iteración"); axes2[1].set_ylabel("$f(x_k)$")
         axes2[1].set_title("Curva de convergencia (escala log)")
         plt.tight_layout()
-        st.pyplot(fig2); plt.close(fig2)
+        mia_pyplot(fig2); plt.close(fig2)
     how_to_read(
         "Izquierda: trayectoria en el espacio de parámetros. "
         "Derecha: pérdida en escala logarítmica — una recta indica convergencia lineal; "
@@ -4576,7 +4645,7 @@ def sec_mom():
             ax_mom.set_xlabel("x"); ax_mom.set_ylabel("Densidad")
         ax_mom.set_title(f"MoM: n={n_mom}")
         ax_mom.legend(fontsize=8)
-        st.pyplot(fig_mom)
+        mia_pyplot(fig_mom)
         plt.close(fig_mom)
     how_to_read(
         "Las barras azules (o histograma azul) son los datos simulados. La curva naranja es la distribución "
@@ -4769,9 +4838,9 @@ def sec_calculo():
     interactive_guide(
         controls=[
             ("Función $f$", "elige la superficie a explorar."),
-            ("Punto $x_0, y_0$", "punto donde se calcula el gradiente."),
+            ("Selected point (punto elegido)", "punto donde se calcula el gradiente."),
         ],
-        procedure="La app evalúa el gradiente en el punto elegido y lo dibuja sobre las curvas de nivel de $f$.",
+        procedure="El laboratorio evalúa el gradiente en el punto elegido y lo dibuja sobre las curvas de nivel de $f$.",
         observe="El gradiente (flecha) es siempre perpendicular a la curva de nivel que pasa por ese punto, "
                 "y apunta hacia donde $f$ crece más rápido.",
     )
@@ -4788,8 +4857,8 @@ def sec_calculo():
             "Seno 2D": r"f(x_1,x_2)=\sin(x_1)\cos(x_2)",
         }
         st.latex(calc_formulas[f_choice])
-        x0_g = st.slider("$x_1$", -2.0, 2.0, 0.8, step=0.1, key="calc_x0")
-        y0_g = st.slider("$x_2$", -2.0, 2.0, 0.5, step=0.1, key="calc_y0")
+        x0_g = st.slider("coordenada x1", -2.0, 2.0, 0.8, step=0.1, key="calc_x0")
+        y0_g = st.slider("coordenada x2", -2.0, 2.0, 0.5, step=0.1, key="calc_y0")
     dx = 1e-5
     if f_choice.startswith("Cuadrática"):
         def _fv(x, y): return x**2 + 5*y**2
@@ -4802,10 +4871,10 @@ def sec_calculo():
     grad_norm = np.sqrt(gx**2 + gy**2)
     with col1:
         metric_grid([
-            ("$f(x_0)$", f"{_fv(x0_g, y0_g):.4f}"),
-            ("$\\partial f/\\partial x_1$", f"{gx:.4f}"),
-            ("$\\partial f/\\partial x_2$", f"{gy:.4f}"),
-            ("$\\|\\nabla f\\|$", f"{grad_norm:.4f}"),
+            ("f at selected point", f"{_fv(x0_g, y0_g):.4f}"),
+            ("partial derivative in x1", f"{gx:.4f}"),
+            ("partial derivative in x2", f"{gy:.4f}"),
+            ("gradient norm", f"{grad_norm:.4f}"),
         ], columns=2)
     with col2:
         xg = np.linspace(-2.2, 2.2, 120)
@@ -4820,7 +4889,7 @@ def sec_calculo():
         ax_g.scatter([x0_g], [y0_g], color="#DC2626", s=60, zorder=5)
         ax_g.set_xlabel("$x_1$"); ax_g.set_ylabel("$x_2$")
         ax_g.set_title("Curvas de nivel y gradiente (flecha roja)")
-        st.pyplot(fig_g); plt.close(fig_g)
+        mia_pyplot(fig_g); plt.close(fig_g)
     how_to_read(
         "Las curvas de nivel son las 'curvas de igual altitud' de $f$. El gradiente (flecha roja) es siempre perpendicular a ellas "
         "y apunta hacia las curvas de valor más alto."
@@ -4857,7 +4926,7 @@ def sec_convexidad():
     beginner_bridge(
         "convexidad en una frase",
         [
-            "Una función convexa tiene forma de bowl: no hay pozos falsos separados del mejor punto.",
+        "Una función convexa tiene bowl shape (forma de cuenco): no hay pozos falsos separados del mejor punto.",
             "Convexo no significa necesariamente único; único requiere convexidad estricta u otros supuestos.",
             "La Hessiana ayuda a certificar convexidad sólo si es semidefinida positiva en todo el dominio relevante.",
         ],
@@ -4881,7 +4950,7 @@ def sec_convexidad():
     st.latex(r"f(\theta y + (1-\theta)x) \leq \theta f(y) + (1-\theta)f(x) \quad \forall x,y,\; \theta \in [0,1]")
     plain_language(
         "En palabras",
-        "La cuerda que une dos puntos del gráfico de $f$ siempre está **por encima** (o encima) de la función. "
+        "La cuerda que une dos puntos del gráfico de $f$ siempre está **por encima** de la función. "
         "La función no tiene 'valles ocultos' entre dos puntos."
     )
     insight(
@@ -4927,8 +4996,8 @@ def sec_convexidad():
 
     worked_example("¿Es $f(x) = (y \\cdot x + b)^2$ convexa en $\\mathbb{R}^D$?")
     st.markdown("$g(t) = t^2$ es convexa ($g'' = 2 > 0$) y $t = y \\cdot x + b$ es afín en $x$. Por composición afín, $f$ es convexa.")
-    worked_example("¿Es $f(x) = \\ln(1 + e^{-y\\cdot x + b})$ convexa? (pérdida logística)")
-    st.markdown("$g(t) = \\ln(1+e^{-t})$ es convexa ($g'' = \\sigma(t)(1-\\sigma(t)) > 0$) y $t$ es afín. Por composición, la pérdida logística es convexa en $x$.")
+    worked_example("¿Es $f(x) = \\ln(1 + e^{-(y\\cdot x + b)})$ convexa? (logistic loss)")
+    st.markdown("$g(t) = \\ln(1+e^{-t})$ es convexa ($g'' = \\sigma(t)(1-\\sigma(t)) > 0$) y $t=y\\cdot x+b$ es afín. Por composición, la logistic loss es convexa en $x$.")
     st.success("Resultado: no hay mínimos locales falsos. La existencia y unicidad del minimizador requieren condiciones adicionales, como regularización o diseño de rango adecuado; si los datos son separables, puede no existir minimizador finito.")
 
     interactive_header("Visualización: convexa vs no convexa")
@@ -4940,10 +5009,10 @@ def sec_convexidad():
     interactive_guide(
         controls=[
             ("Función", "elige entre funciones convexas y no convexas para ver la diferencia."),
-            ("Punto $a$, Punto $b$", "mueve los dos puntos para ver si la cuerda queda sobre la función."),
+            ("Puntos a y b", "mueve los dos puntos para ver si la cuerda queda sobre la función."),
         ],
         procedure="Se dibujan $f$, la cuerda entre dos puntos, y el plano tangente en $a$.",
-        observe="Para funciones convexas la cuerda siempre queda sobre $f$ y el tangente siempre por debajo. "
+        observe="Para funciones convexas la cuerda siempre queda sobre $f$ y la tangente siempre por debajo. "
                 "Para no convexas, puede haber tramos donde la cuerda corte a la función.",
     )
     col1, col2 = lab_columns()
@@ -4960,8 +5029,8 @@ def sec_convexidad():
             "Seno no convexo": r"f(x)=\sin(x)",
         }
         st.latex(conv_formulas[fconv_choice])
-        a_cv = st.slider("Punto $a$", -3.0, 3.0, -1.5, step=0.1, key="conv_a")
-        b_cv = st.slider("Punto $b$", -3.0, 3.0, 1.5, step=0.1, key="conv_b")
+        a_cv = st.slider("punto a", -3.0, 3.0, -1.5, step=0.1, key="conv_a")
+        b_cv = st.slider("punto b", -3.0, 3.0, 1.5, step=0.1, key="conv_b")
     if fconv_choice == "Cuadrática convexa":
         fconv = lambda x: x**2; fconv_label = r"$x^2$"; is_convex = True
     elif fconv_choice == "Exponencial convexa":
@@ -4978,14 +5047,14 @@ def sec_convexidad():
     chord_y = np.array([fconv(a_cv), fconv(b_cv)])
     with col1:
         if is_convex:
-            st.success("Esta función **es convexa**: la cuerda queda sobre $f$ y el tangente por debajo.")
+            st.success("Esta función **es convexa**: la cuerda queda sobre $f$ y la tangente por debajo.")
         else:
             st.error("Esta función **no es convexa**: hay tramos donde la cuerda corta a $f$.")
         metric_grid([
-            (f"$f(a)$", f"{fconv(a_cv):.3f}"),
-            (f"$f(b)$", f"{fconv(b_cv):.3f}"),
-            ("Punto medio: $f\\left(\\frac{a+b}{2}\\right)$", f"{fconv((a_cv+b_cv)/2):.3f}"),
-            ("Cuerda en $(a+b)/2$", f"{(fconv(a_cv)+fconv(b_cv))/2:.3f}"),
+            ("f(a)", f"{fconv(a_cv):.3f}"),
+            ("f(b)", f"{fconv(b_cv):.3f}"),
+            ("function at midpoint", f"{fconv((a_cv+b_cv)/2):.3f}"),
+            ("chord at midpoint", f"{(fconv(a_cv)+fconv(b_cv))/2:.3f}"),
         ], columns=2)
     with col2:
         fig_cv, ax_cv = plt.subplots(figsize=(7, 4))
@@ -4996,7 +5065,7 @@ def sec_convexidad():
         y_all = np.concatenate([fconv(xs_cv), tangent])
         ax_cv.set_ylim(np.nanmin(y_all)-0.5, np.nanmax(y_all)+0.5)
         ax_cv.legend(fontsize=9)
-        st.pyplot(fig_cv); plt.close(fig_cv)
+        mia_pyplot(fig_cv); plt.close(fig_cv)
     how_to_read(
         "Naranja = cuerda entre $a$ y $b$. Verde punteado = tangente en $a$. "
         "Función convexa: cuerda sobre la curva, tangente por debajo. "
@@ -5133,8 +5202,8 @@ def sec_levenberg():
             "Logístico sigmoidal": r"\hat y(t)=\frac{L}{1+e^{-k(t-t_0)}}",
         }
         st.latex(lm_formulas[lm_model])
-        lm_noise = st.slider("Ruido $\\sigma$", 0.0, 1.0, 0.2, step=0.05, key="lm_noise")
-        lm_lambda = st.slider("$\\lambda$ inicial", 0.001, 10.0, 0.1, step=0.01, key="lm_lambda")
+        lm_noise = st.slider("ruido σ", 0.0, 1.0, 0.2, step=0.05, key="lm_noise")
+        lm_lambda = st.slider("λ inicial", 0.001, 10.0, 0.1, step=0.01, key="lm_lambda")
         lm_iters = st.slider("Iteraciones LM", 1, 50, 20, key="lm_iters")
         if st.button("Nueva muestra", key="lm_seed_btn"):
             st.session_state["lm_seed"] = np.random.randint(0, 100000)
@@ -5197,7 +5266,7 @@ def sec_levenberg():
     with col1:
         for lbl, tv, fitted in zip(labels, true_vals, theta):
             metric_grid([(f"Verdadero {lbl}", f"{tv:.3f}"), (f"Ajustado {lbl}", f"{fitted:.3f}")], columns=2)
-        st.metric("Pérdida final $E$", f"{losses_lm[-1]:.4f}" if losses_lm else "-")
+        st.metric("final loss E", f"{losses_lm[-1]:.4f}" if losses_lm else "-")
         st.metric("λ final", f"{lam:.2e}")
 
     with col2:
@@ -5209,11 +5278,12 @@ def sec_levenberg():
         axes_lm[0].plot(t_fine, model_fn(t_fine, np.array(true_vals)), color="#059669", lw=1.5, ls=":", label="Verdadero")
         axes_lm[0].set_xlabel("t"); axes_lm[0].set_ylabel("y"); axes_lm[0].legend(fontsize=8)
         axes_lm[0].set_title("Ajuste del modelo")
-        axes_lm[1].semilogy(losses_lm, "o-", color="#4C72B0", ms=3)
+        losses_lm_plot = np.maximum(np.asarray(losses_lm, dtype=float), np.finfo(float).tiny)
+        axes_lm[1].semilogy(losses_lm_plot, "o-", color="#4C72B0", ms=3)
         axes_lm[1].set_xlabel("Iteración LM"); axes_lm[1].set_ylabel("$E(\\theta)$")
         axes_lm[1].set_title("Convergencia de la pérdida")
         plt.tight_layout()
-        st.pyplot(fig_lm); plt.close(fig_lm)
+        mia_pyplot(fig_lm); plt.close(fig_lm)
     how_to_read(
         "Izquierda: gris punteado = parámetros iniciales, naranja = ajuste LM final, verde = verdadero. "
         "Derecha: curva de pérdida en escala log. Convergencia rápida suele indicar que LM aceptó pasos tipo Gauss-Newton (λ pequeño)."
@@ -5241,7 +5311,7 @@ def sec_levenberg():
 # ==================================================================
 #                   NAVEGACIÓN / SIDEBAR
 # ==================================================================
-st.sidebar.title("MIA — Probabilidad para IA")
+st.sidebar.title("Probabilidad para IA")
 st.sidebar.caption("Derivaciones, ejemplos resueltos, laboratorios interactivos y conexiones con IA.")
 
 SECTIONS = {
@@ -5397,8 +5467,116 @@ with st.sidebar:
 st.sidebar.markdown("---")
 st.sidebar.caption("Cada sección integra marco formal, ejemplos, exploración computacional y conexiones con aprendizaje automático.")
 
-SECTION_LABELS = list(SECTIONS.keys())
+SECTION_LABELS = [label for labels in NAV_GROUPS.values() for label in labels]
 SECTION_TO_GROUP = {label: group for group, labels in NAV_GROUPS.items() for label in labels}
+
+SECTION_TAKEAWAYS = {
+    "1. Espacios y Axiomas de Kolmogorov": (
+        "Un probability model necesita outcomes, events y una regla de probabilidad.",
+        "Para verificar que los cálculos probabilísticos posteriores sean coherentes.",
+        "No tratar las reglas de probabilidad como intuición opcional; son restricciones.",
+    ),
+    "2. Regla de Laplace y Combinatoria": (
+        "El counting depende de order y replacement antes de elegir cualquier fórmula.",
+        "Cuando los outcomes son equiprobables y el sample space puede contarse.",
+        "No usar combinations ni permutations antes de decidir qué cuenta como distinto.",
+    ),
+    "3. Probabilidad Condicional": (
+        "La conditional probability cambia el universo de referencia.",
+        "Cuando la información B ya es conocida antes de preguntar por el evento A.",
+        "No leer una conditional probability alta como causalidad por sí sola.",
+    ),
+    "4. Teorema de Bayes": (
+        "Bayes actualiza un prior con evidencia mediante likelihoods.",
+        "Para diagnosis, filtering, classification y razonamiento posterior.",
+        "No confundir sensitivity con posterior probability.",
+    ),
+    "5. Clasificador Naïve Bayes": (
+        "Naive Bayes combina priors y feature likelihoods bajo una conditional-independence assumption.",
+        "Como clasificador probabilístico transparente y como baseline.",
+        "No asumir que la independence assumption es literalmente cierta en datos reales.",
+    ),
+    "6. VA: PMF, PDF y CDF": (
+        "La PMF cuenta masa, la PDF describe densidad y la CDF acumula probabilidad.",
+        "Para calcular probabilidades de intervalo mediante diferencias de CDF.",
+        "No leer la altura de una density continua como probabilidad.",
+    ),
+    "7. Catálogo de Distribuciones": (
+        "Cada distribution codifica una historia generadora de datos distinta.",
+        "Para alinear model assumptions con el tipo de outcome.",
+        "No elegir una distribution solo porque su curva parece familiar.",
+    ),
+    "8. MLE y Entropía Cruzada": (
+        "Maximum likelihood elige parámetros que vuelven más plausibles los datos observados.",
+        "Para conectar statistical estimation con loss minimization.",
+        "No interpretar una likelihood alta como prueba de que la familia de modelos es correcta.",
+    ),
+    "9. Esperanza, Varianza y Jensen": (
+        "Expectation resume comportamiento promedio, variance resume dispersión y Jensen captura efectos de curvatura.",
+        "Para razonar sobre uncertainty, risk y transformaciones.",
+        "No asumir que transformar un promedio equivale a promediar una transformación.",
+    ),
+    "10. FGM, Covarianza y Correlación": (
+        "Generating functions y covariance revelan moments y linear dependence.",
+        "Usar correlation para asociación lineal y covariance para variación conjunta.",
+        "No concluir independence a partir de zero correlation en general.",
+    ),
+    "11. Gaussiana Multivariada y PCA": (
+        "La covariance geometry determina elipses, principal directions y proyecciones de baja dimensión.",
+        "Usar PCA para resumir variación e inspeccionar effective dimension.",
+        "No tratar las PCA components como variables causales.",
+    ),
+    "12. Maldición de la Dimensionalidad": (
+        "High dimension vuelve escasos los local neighborhoods y menos discriminativas las distancias.",
+        "Para motivar embeddings, feature selection y dimensionality reduction.",
+        "No concluir que high-dimensional learning es imposible cuando los datos tienen estructura.",
+    ),
+    "13. Desigualdades de Concentración": (
+        "Las concentration inequalities entregan upper bounds garantizados para grandes desviaciones.",
+        "Cuando las probabilidades exactas son desconocidas pero hay assumptions disponibles.",
+        "No leer una bound como predicción exacta.",
+    ),
+    "14. Muestras y Testeo Agrupado": (
+        "El sampling design cambia costo, incertidumbre e interpretación.",
+        "Usar pooled testing cuando los positivos son raros y los tests pueden combinarse con sentido.",
+        "No asumir que pooling ayuda cuando la prevalence es alta.",
+    ),
+    "15. Leyes Límite: LLN y CLT": (
+        "LLN explica estabilidad de promedios; CLT explica la forma de errores escalados.",
+        "Para justificar estimation, uncertainty y confidence intervals bajo assumptions.",
+        "No asumir que CLT arregla dependencia, varianza infinita o muestras diminutas.",
+    ),
+    "16. Algoritmos Aleatorizados": (
+        "Randomness puede proteger algoritmos contra estructura adversarial y reducir expected cost.",
+        "Usar randomized analysis para comparar typical cost con worst-case cost.",
+        "No confundir expected performance con garantía para cada corrida individual.",
+    ),
+    "17. Descenso de Gradiente, Newton y Backtracking": (
+        "Los optimization methods difieren en cómo eligen direction y step size.",
+        "Usar gradients, curvature y line search para razonar sobre convergence behavior.",
+        "No asumir que un paso más grande siempre es más rápido o más seguro.",
+    ),
+    "18. Método de los Momentos (MoM)": (
+        "MoM estima parámetros igualando theoretical moments y empirical moments.",
+        "Para estimación transparente cuando los moments identifican los parámetros.",
+        "No asumir consistency sin identification y regularity conditions.",
+    ),
+    "19. Cálculo Diferencial para IA": (
+        "Derivatives describen sensibilidad local; gradients apuntan hacia el aumento más rápido.",
+        "Para entender learning rules, optimization y local approximation.",
+        "No confundir información local de derivatives con comportamiento global.",
+    ),
+    "20. Convexidad": (
+        "Convexity elimina false local minima bajo los assumptions correctos.",
+        "Para saber cuándo las optimization guarantees son plausibles.",
+        "No asumir que toda ML loss es convexa o tiene minimizador único.",
+    ),
+    "21. Levenberg-Marquardt y NLS": (
+        "LM interpola entre pasos estables tipo gradient y pasos rápidos tipo Gauss-Newton.",
+        "Para nonlinear least squares cuando hay Jacobians disponibles.",
+        "No esperar que arregle automáticamente mala elección de modelo o inicialización imposible.",
+    ),
+}
 
 def _goto_section(new_label):
     if new_label in SECTIONS and new_label != st.session_state.choice:
@@ -5413,7 +5591,7 @@ _progress_pct = int(100 * (_current_idx + 1) / len(SECTION_LABELS))
 st.markdown(
     f"""
     <div class="mia-hero">
-        <div class="mia-hero-kicker">MIA · IMT3850 · {_current_group} · Sección {_current_idx + 1} de {len(SECTION_LABELS)}</div>
+        <div class="mia-hero-kicker">Probabilidad para IA · {_current_group} · Sección {_current_idx + 1} de {len(SECTION_LABELS)}</div>
         <h1>Probabilidad para Inteligencia Artificial</h1>
         <p>Desarrollo conceptual, derivaciones paso a paso, laboratorios interactivos y lectura rigurosa de los modelos probabilísticos usados en IA.</p>
         <div class="mia-progress-track"><div class="mia-progress-fill" style="width:{_progress_pct}%;"></div></div>
@@ -5423,6 +5601,8 @@ st.markdown(
 )
 
 SECTIONS[st.session_state.choice]()
+if st.session_state.choice in SECTION_TAKEAWAYS:
+    minimum_takeaway(*SECTION_TAKEAWAYS[st.session_state.choice])
 
 st.markdown("<div class='mia-prevnext-spacer'></div>", unsafe_allow_html=True)
 c_prev, c_info, c_next = st.columns([5, 2, 5])
