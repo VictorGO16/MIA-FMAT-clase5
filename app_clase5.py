@@ -20,7 +20,7 @@ from sklearn.metrics import accuracy_score
 #                       CONFIGURACIÓN GLOBAL
 # ==================================================================
 st.set_page_config(
-    page_title="MIA - Probabilidad para IA",
+    page_title="Fundamentos Matemáticos para IA",
     layout="wide",
 )
 
@@ -5829,7 +5829,7 @@ def sec_levenberg():
 # ==================================================================
 #                   NAVEGACIÓN / SIDEBAR
 # ==================================================================
-st.sidebar.title("Probabilidad para IA")
+st.sidebar.title("Fundamentos Matemáticos para IA")
 st.sidebar.caption("Derivaciones, ejemplos resueltos, laboratorios interactivos y conexiones con IA.")
 
 SECTIONS = {
@@ -6117,8 +6117,8 @@ _progress_pct = int(100 * (_current_idx + 1) / len(SECTION_LABELS))
 st.markdown(
     f"""
     <div class="mia-hero">
-        <div class="mia-hero-kicker">Probabilidad para IA · {_current_group} · Sección {_current_idx + 1} de {len(SECTION_LABELS)}</div>
-        <h1>Probabilidad para Inteligencia Artificial</h1>
+        <div class="mia-hero-kicker">Matemática para IA · {_current_group} · Sección {_current_idx + 1} de {len(SECTION_LABELS)}</div>
+        <h1>Fundamentos Matemáticos para Inteligencia Artificial</h1>
         <p>Desarrollo conceptual, derivaciones step a step, laboratorios interactivos y lectura rigurosa de los models probabilísticos usados en IA.</p>
         <div class="mia-progress-track"><div class="mia-progress-fill" style="width:{_progress_pct}%;"></div></div>
     </div>
