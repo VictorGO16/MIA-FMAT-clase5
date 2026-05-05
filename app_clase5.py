@@ -4165,6 +4165,8 @@ def sec_gradient_backtracking():
     ])
 
     st.markdown("### Gradient Descent")
+    st.latex(r"x^{k+1}=x^k-\gamma_k\nabla f(x^k)")
+    st.latex(r"x^\star=\arg\min_{x\in\mathbb R^D} f(x)")
     st.latex(r"x_{k+1} = x_k - \gamma_k \nabla f(x_k)")
     plain_language(
         "Cómo se lee la actualización",
@@ -4172,6 +4174,27 @@ def sec_gradient_backtracking():
         "$\\nabla f(x_k)$ indica la dirección de subida más rápida. El signo menos mueve el punto en la dirección contraria. "
         "$\\gamma_k$ regula el step size."
     )
+    formula_walkthrough(
+        "Gradient Descent step from the PDF, sin saltos de notación",
+        terms={
+            r"x^k": "Current iterate: el punto donde está parado el optimizer antes de actualizar.",
+            r"x^{k+1}": "Next iterate: el punto después de mover los parameters.",
+            r"\nabla f(x^k)": "Gradient evaluado en el punto actual; apunta hacia la dirección de maximum increase.",
+            r"-\nabla f(x^k)": "Descent direction: dirección contraria al maximum increase.",
+            r"\gamma_k": "Step size o learning rate de la iteration $k$.",
+        },
+        steps=[
+            "Primero se evalúa la local slope de la objective en $x^k$ usando el Gradient.",
+            "Como queremos minimizar, no avanzamos hacia el Gradient sino en sentido contrario.",
+            "El factor $\\gamma_k$ decide cuánto confiar en esa local information.",
+            "Si $\\gamma_k$ es muy pequeño, el method avanza lento; si es muy grande, puede oscilar o aumentar la loss.",
+            "La fórmula con superscript $x^k$ y la fórmula con subscript $x_k$ representan la misma iteration; sólo cambia la convención de notación.",
+        ],
+        expanded=True,
+    )
+    st.markdown("El PDF explicita la lectura monotónica esperada cuando el learning rate es adecuado:")
+    st.latex(r"f(x^{(0)})\ge f(x^{(1)})\ge f(x^{(2)})\ge\cdots")
+    st.caption("Esta chain no es automática para cualquier $\\gamma_k$: requiere un step size adecuado o una line search que asegure sufficient decrease.")
     notation_box([
         (r"\preceq", "Orden entre matrices: $A \\preceq B$ significa $B - A$ es positive semidefinite (PSD), es decir, $v^\\top(B-A)v \\geq 0$ para todo $v$. En la práctica: la curvature de $B$ supera a la de $A$ en todas las direcciones."),
         ("m, M", "Constantes que acotan los eigenvalues de la Hessian $H(x)$: $m$ es el minimum y $M$ el maximum. Cuando $m \\approx M$, las curvatures son similares y el descent converge rápido."),
@@ -4180,6 +4203,19 @@ def sec_gradient_backtracking():
         "Cuando $f$ es convex con bounded curvature $mI \\preceq H(x) \\preceq MI$, Gradient Descent con "
         "step seguro $\\gamma = 1/M$ cumple esta garantía de convergencia linear:"
     )
+    with advanced_expander("Descent bound antes de elegir γ"):
+        latex_aligned([
+            r"G(\gamma_k)=f(x^{(k)}-\gamma_k\nabla f(x^{(k)}))",
+            r"G(\gamma_k)\le f(x^{(k)})-\gamma\|\nabla f(x^{(k)})\|_2^2+\frac{M\gamma^2}{2}\|\nabla f(x^{(k)})\|_2^2",
+            r"\gamma^\star=\frac1M",
+            r"f(x^{(k+1)})\le f(x^{(k)})-\frac{1}{2M}\|\nabla f(x^{(k)})\|_2^2",
+            r"f(x^\star)\ge f(x^{(k)})-\frac{1}{2m}\|\nabla f(x^{(k)})\|_2^2",
+        ])
+        st.markdown(
+            "Estas inequalities son el puente entre local curvature bounds y convergence. "
+            "La primera controla cuánto puede bajar la function al moverse contra el Gradient; "
+            "la cota inferior conecta Gradient norm con distancia vertical al optimum."
+        )
     st.latex(r"f(x_{k+1}) - f(x^\star) \leq \left(1 - \frac{m}{M}\right)\bigl(f(x_k) - f(x^\star)\bigr)")
     formula_walkthrough(
         "Lectura de la garantía de convergence",
@@ -4200,6 +4236,11 @@ def sec_gradient_backtracking():
     st.caption("La razón $m/M$ mide qué tan bien conditioned está el problema. Con $m \\approx M$ converge en pocas iterations; con $m \\ll M$ puede oscilar.")
 
     st.markdown("### Método de Newton")
+    latex_aligned([
+        r"x^\star=\arg\min_x F(x)",
+        r"\nabla F(x^\star)=0",
+        r"\nabla F(x_k+\Delta x_k)\approx \nabla F(x_k)+H(x_k)\Delta x_k",
+    ])
     plain_language(
         "Idea: usar local curvature para elegir steps informados",
         "Gradient Descent asume que la function es localmente plana: sólo usa first-order information. "
@@ -4207,6 +4248,29 @@ def sec_gradient_backtracking():
         "Bajo hipótesis locales de regularidad, non-singular Hessian y punto inicial suficientemente cercano, eso le da quadratic convergence."
     )
     st.latex(r"x_{k+1} = x_k - \bigl(H(x_k)\bigr)^{-1}\nabla f(x_k)")
+    st.markdown("El PDF también lo escribe como el minimizer del second-order Taylor polynomial:")
+    st.latex(r"x_{k+1}=\arg\min_x\left(F(x_k)+\nabla F(x_k)^\top(x-x_k)+\frac12(x-x_k)^\top H(x_k)(x-x_k)\right)")
+    st.markdown("**Convergence theorem.** Bajo regularity assumptions locales y partiendo suficientemente cerca de $x^\\star$, Newton tiene **quadratic convergence**:")
+    st.latex(r"\|x_{k+1}-x^\star\|\le C\|x_k-x^\star\|^2")
+    formula_walkthrough(
+        "Lectura completa del theorem de convergence de Newton",
+        terms={
+            r"x^\star": "Optimum o stationary point al que Newton intenta converger.",
+            r"x_k": "Current iterate: el punto antes del step.",
+            r"x_{k+1}": "Next iterate: el punto después del step de Newton.",
+            r"\|x_k-x^\star\|": "Error actual medido como distance al optimum.",
+            r"\|x_{k+1}-x^\star\|": "Error después de una iteration.",
+            r"C": "Constante local que depende de la function cerca de $x^\\star$; no es un tuning parameter del algorithm.",
+        },
+        steps=[
+            "La inequality no dice que Newton siempre converge desde cualquier punto inicial; es un theorem local.",
+            "Local significa: el punto inicial debe estar suficientemente cerca de $x^\\star$ y la Hessian debe comportarse bien.",
+            "Quadratic convergence significa que el error nuevo queda acotado por una constante multiplicada por el error anterior al cuadrado.",
+            "Ejemplo numérico: si el error actual fuera $10^{-2}$ y $C$ no fuera grande, el siguiente error queda del orden de $10^{-4}$.",
+            "Por eso Newton puede volverse extremadamente rápido cerca del optimum, pero también puede fallar si se usa lejos de esa zona sin line search o damping.",
+        ],
+        expanded=True,
+    )
     formula_walkthrough(
         "Por qué Newton converge quadraticmente",
         terms={
@@ -4240,7 +4304,7 @@ def sec_gradient_backtracking():
         ],
         expanded=True,
     )
-    st.caption("Partiendo de $x_0 = 3$: $x_1 \\approx 2.167$, $x_2 \\approx 2.019$, $x_3 \\approx 2.000$ (converge al punto crítico $x^\\star = 2$, que es minimum local).")
+    st.caption("Esta iteration coincide con el Babylonian method para calcular $\\sqrt{4}=2$. Partiendo de $x_0 = 3$: $x_1 \\approx 2.167$, $x_2 \\approx 2.019$, $x_3 \\approx 2.000$ (converge al punto crítico $x^\\star = 2$, que es minimum local).")
     class_question(
         "¿Cómo escogemos $x_{k+1}$ en Newton?",
         "En $x_k$ reemplazamos la function por su quadratic Taylor approximation. Ese paraboloide es fácil de minimizar; "
@@ -4248,6 +4312,35 @@ def sec_gradient_backtracking():
         "$x_{k+1}=x_k-H(x_k)^{-1}\\nabla f(x_k)$. En implementación numérica se evita formar la inversa explícita: se resuelve el sistema linear.",
         expanded=True,
     )
+    with advanced_expander("Newton with Backtracking Line Search"):
+        st.markdown(
+            "El PDF no usa Newton sólo como fórmula cerrada: lo combina con **Backtracking Line Search** para evitar steps peligrosos "
+            "cuando la local quadratic approximation todavía no describe bien la function."
+        )
+        latex_aligned([
+            r"\Delta x_k=-H(x_k)^{-1}\nabla F(x_k)",
+            r"x_{k+1}=x_k+t\,\Delta x_k",
+            r"F(x_k+t\Delta x_k)\le F(x_k)+\alpha t\nabla F(x_k)^\top\Delta x_k",
+            r"\beta\in(0,1),\qquad \alpha\in(0,0.5)",
+        ])
+        formula_walkthrough(
+            "Backtracking de Newton step a step",
+            terms={
+                r"\Delta x_k": "Newton direction: direction propuesta por Gradient y Hessian.",
+                r"t": "Step multiplier: parte en 1 y se reduce si la loss no baja suficiente.",
+                r"\beta": "Shrink factor: si el step falla, se reemplaza $t$ por $\\beta t$.",
+                r"\alpha": "Sufficient decrease parameter: controla cuánta mejora mínima exige Armijo.",
+                r"\nabla F(x_k)^\top\Delta x_k": "Directional derivative: cuánto debería cambiar $F$ al avanzar en la Newton direction.",
+            },
+            steps=[
+                "Se calcula la Newton direction resolviendo el linear system con la Hessian.",
+                "Se intenta primero el full step $t=1$.",
+                "Si la Armijo condition no se cumple, el step era demasiado agresivo para la local geometry.",
+                "Se reduce $t$ multiplicando por $\\beta$ y se vuelve a probar.",
+                "El accepted step conserva la direction de Newton, pero controla su longitud.",
+            ],
+            expanded=True,
+        )
     class_question(
         "¿Qué tan bien funciona Newton en la práctica?",
         "Funciona muy bien cuando ya estás cerca del optimum y la Hessian describe bien la local curvature. "
@@ -4276,6 +4369,14 @@ def sec_gradient_backtracking():
         latex_aligned([
             r"\gamma^\star = \left(\frac{2}{\sqrt{\lambda_{\max}}+\sqrt{\lambda_{\min}}}\right)^2",
             r"\beta^\star = \left(\frac{\sqrt{\lambda_{\max}}-\sqrt{\lambda_{\min}}}{\sqrt{\lambda_{\max}}+\sqrt{\lambda_{\min}}}\right)^2",
+        ])
+        st.markdown("El PDF deriva estos valores siguiendo una eigen-direction de $S$ y transformando Momentum en un two-step linear system:")
+        latex_aligned([
+            r"Sq=\lambda q,\quad x^{(k)}=c_k q,\quad z^{(k)}=d_k q,\quad \nabla f(x^{(k)})=\lambda c_k q",
+            r"c_{k+1}=c_k-\gamma d_k,\qquad -\lambda c_{k+1}+d_{k+1}=\beta d_k",
+            r"\begin{bmatrix}1&0\\-\lambda&1\end{bmatrix}\begin{bmatrix}c_{k+1}\\d_{k+1}\end{bmatrix}=\begin{bmatrix}1&-\gamma\\0&\beta\end{bmatrix}\begin{bmatrix}c_k\\d_k\end{bmatrix}",
+            r"\begin{bmatrix}c_{k+1}\\d_{k+1}\end{bmatrix}=\begin{bmatrix}1&-\gamma\\\lambda&\beta-\lambda\gamma\end{bmatrix}\begin{bmatrix}c_k\\d_k\end{bmatrix}=R\begin{bmatrix}c_k\\d_k\end{bmatrix}",
+            r"\min_{\gamma,\beta}\max_{\lambda_{\min}(S)\le\lambda\le\lambda_{\max}(S)}\max\{|e_1(\lambda)|,|e_2(\lambda)|\}",
         ])
         st.caption("Con estos parameters el número de iterations para converger crece como $\\sqrt{\\lambda_{\\max}/\\lambda_{\\min}}$ en lugar de $\\lambda_{\\max}/\\lambda_{\\min}$: una mejora significativa cuando el problema está mal condicionado.")
 
@@ -4361,6 +4462,23 @@ def sec_gradient_backtracking():
         ],
         expanded=True,
     )
+    with advanced_expander("Backtracking algorithm"):
+        st.code(
+            """Input: x, f(x), ∇f(x)
+Output: next iteration
+Choose α, β with 0 < α < 0.5 and 0 < β < 1
+Initialize γ = 1
+X = x - γ∇f(x)
+while f(X) > f(x) - αγ||∇f(x)||²:
+    γ = βγ
+    X = x - γ∇f(x)
+return X""",
+            language="text",
+        )
+        st.markdown(
+            "La condición `while` representa la Armijo condition como test computacional. "
+            "Si el proposed point no reduce suficiente la objective, se achica el step size y se prueba otra vez."
+        )
     with advanced_expander("Exact line search"):
         st.markdown(
             "Exact line search elige el step size que minimiza la loss sobre la recta "
@@ -4371,22 +4489,32 @@ def sec_gradient_backtracking():
             "Es conceptualmente directa. En entrenamiento de models grandes suele ser demasiado costosa porque cada prueba de "
             "$\\gamma$ exige evaluar la loss; por eso se usan heurísticas, learning rate scheduling o backtracking."
         )
-    with advanced_expander("Derivación del Zig-Zag y exact line search del PDF"):
-        st.markdown("Para la quadratic function del PDF:")
+    with advanced_expander("Derivación del Zig-Zag y Exact Line Search"):
+        st.markdown("Para la quadratic function:")
         latex_aligned([
             r"f(x_1,x_2)=\frac12(x_1^2+b x_2^2)",
             r"\nabla f(x_1,x_2)=\begin{bmatrix}x_1\\ b x_2\end{bmatrix}",
             r"x^{(k+1)}=x^{(k)}-\gamma_k\nabla f(x^{(k)})",
+            r"\begin{bmatrix}x_1^{(k+1)}\\x_2^{(k+1)}\end{bmatrix}=\begin{bmatrix}x_1^{(k)}\\x_2^{(k)}\end{bmatrix}-\gamma_k\begin{bmatrix}x_1^{(k)}\\b x_2^{(k)}\end{bmatrix}",
         ])
         st.markdown(
             "Exact line search busca el $\\gamma_k$ que deja la menor loss posible sobre esa línea. "
             "Al sustituir la update dentro de $f$ y derivar respecto de $\\gamma_k$, se obtiene:"
         )
+        latex_aligned([
+            r"G(\gamma_k)=\frac12\left((x_1^{(k)}-\gamma_k x_1^{(k)})^2+b(x_2^{(k)}-\gamma_k b x_2^{(k)})^2\right)",
+            r"G'(\gamma_k)=0\Rightarrow -x_1^{(k)}(1-\gamma_k)-b^2x_2^{(k)}(1-b\gamma_k)=0",
+        ])
         st.latex(r"\gamma_k=\frac{(x_1^{(k)})^2+(b x_2^{(k)})^2}{(x_1^{(k)})^2+b^3(x_2^{(k)})^2}")
         st.markdown(
             "Si el punto inicial es $(x_1^{(0)},x_2^{(0)})=(b,1)$, esta expresión se simplifica a:"
         )
         st.latex(r"\gamma_0=\frac{2}{1+b}")
+        latex_aligned([
+            r"x_1^{(1)}=b\left(\frac{b-1}{b+1}\right),\qquad x_2^{(1)}=\left(\frac{b-1}{b+1}\right)",
+            r"x_1^{(2)}=b\left(\frac{b-1}{b+1}\right)^2,\qquad x_2^{(2)}=\left(\frac{b-1}{b+1}\right)^2",
+            r"\gamma_k=\frac{2}{1+b},\qquad x_1^{(k)}=b\left(\frac{b-1}{b+1}\right)^k,\qquad x_2^{(k)}=\left(\frac{b-1}{b+1}\right)^k",
+        ])
         st.markdown(
             "El PDF muestra que ese mismo factor se repite en las siguientes iterations y que la loss se reduce como:"
         )
@@ -4395,7 +4523,7 @@ def sec_gradient_backtracking():
             "Lectura: si $b$ está cerca de 0, el factor $(1-b)/(1+b)$ queda cerca de 1. "
             "Eso significa que cada iteration reduce poco la loss, por eso aparece el zig-zag lento."
         )
-    with advanced_expander("Backtracking convergence bound del PDF"):
+    with advanced_expander("Backtracking convergence bound"):
         st.markdown(
             "El PDF analiza backtracking bajo la condición $mI \\preceq H(x) \\preceq MI$. "
             "La idea es que backtracking no prueba infinitamente: si un step size es demasiado grande, lo reduce por $\\beta$ "
@@ -5134,7 +5262,7 @@ def sec_calculo():
         ],
         expanded=False,
     )
-    worked_example("Chain rule multivariable del PDF")
+    worked_example("Chain rule multivariable")
     st.markdown("El PDF usa estas functions:")
     latex_aligned([
         r"f(x_1,x_2)=\exp(x_1x_2^2)",
@@ -5398,7 +5526,7 @@ def sec_Convexity():
     worked_example("¿Es $f(x) = \\ln(1 + \\exp(-y\\cdot x + b))$ convex? (logistic loss)")
     st.markdown(
         "$g(t)=\\ln(1+e^t)$ es convex y creciente; $t=-y\\cdot x+b$ es affine en $x$. "
-        "Por affine composition, la logistic loss del PDF es convex en $x$."
+        "Por affine composition, la logistic loss es convex en $x$."
     )
     st.success("Resultado: no hay false local minima. La existencia y unicidad del minimizer requieren condiciones adicionales, como regularization o rank adecuado; si los datos son separables, puede no existir finite minimizer.")
 
@@ -5631,7 +5759,9 @@ def sec_levenberg():
         "Cuando $\\hat y(\\theta)$ depende **nonlinearly** de $\\theta$, no hay closed-form solution. "
         "Minimizamos $E(\\theta) = \\|y - \\hat y(\\theta)\\|^2$ iterativamente."
     )
+    st.latex(r"L(\theta)=\frac12\sum_{i=1}^{m}(y_i-f(x_i;\theta))^2=\frac12\|y-\hat y(\theta)\|_2^2")
     st.latex(r"\nabla E = -2 J(\theta)^\top \bigl(y - \hat y(\theta)\bigr) = 0")
+    st.latex(r"\nabla L(\theta)=-J^\top(y-\hat y(\theta))=0")
     formula_walkthrough(
         "Lectura del NLS Gradient",
         terms={
@@ -5671,6 +5801,7 @@ def sec_levenberg():
     ], expanded=True)
     latex_aligned([
         r"\text{Gradient Descent:}\quad \Delta\theta = s\,J^\top(y - \hat y(\theta))",
+        r"\Delta\theta=-\gamma\nabla L(\theta^{(k)})=\gamma J^\top e\quad\Rightarrow\quad \left(\frac1\gamma I\right)\Delta\theta=J^\top e",
         r"\text{Gauss-Newton:}\quad J^\top J\,\Delta\theta = J^\top(y - \hat y(\theta))",
         r"\text{Levenberg-Marquardt:}\quad (J^\top J + \lambda I)\,\Delta\theta = J^\top(y - \hat y(\theta))",
     ])
@@ -5821,8 +5952,829 @@ def sec_levenberg():
     ai_bridge(
         "LM es la base de muchos model fitters en **computer vision** (camera calibration, "
         "ajuste de poses), **física computacional** y **bioinformática**. En deep learning, "
-        "**K-FAC** (Kronecker-Factored Approximate Curveture) usa una idea similar: aproximar la curvature "
+        "**K-FAC** (Kronecker-Factored Approximate Curvature) usa una idea similar: aproximar la curvature "
         "de la loss para dar steps más informados que SGD puro."
+    )
+
+
+# ==================================================================
+# SECCIÓN 22 — QUASI-NEWTON, NAG Y SUBGRADIENTS
+# ==================================================================
+def sec_quasi_newton_subgradients():
+    section_title(
+        "22. Quasi-Newton, Nesterov and Subgradients",
+        "Cómo entrenar cuando la Hessian completa es cara, el valley es estrecho o la loss no es differentiable."
+    )
+    beginner_bridge(
+        "qué problema resuelve esta sección",
+        [
+            "Newton usa curvature, pero la Hessian puede ser imposible de guardar o invertir.",
+            "Momentum y Nesterov Accelerated Gradient reducen zig-zag usando memoria de steps previos.",
+            "Subgradients permiten optimizar functions con esquinas, como absolute value, ReLU y Lasso.",
+        ],
+    )
+    motivation(
+        "Esta sección cubre tres ideas que aparecen todo el tiempo en ML: "
+        "**Quasi-Newton methods** aproximan curvature sin construir la full Hessian; **Nesterov Accelerated Gradient** "
+        "mira la loss después de aplicar momentum; **Subgradient method** permite entrenar aunque la function tenga esquinas."
+    )
+    prerequisites_box(
+        "- Gradient, Hessian y Taylor approximation (sección 19).\n"
+        "- Gradient Descent, Newton, Backtracking y Momentum (sección 17).\n"
+        "- Convexity y first-order condition (sección 20)."
+    )
+    concept_glossary([
+        ("Quasi-Newton methods", "Family de optimizers que imita Newton usando una approximation de Hessian construida desde cambios observados en Gradient."),
+        ("Secant equation", "Condición $B_k s_k = y_k$: la nueva matrix $B_k$ debe explicar cómo cambió el Gradient entre dos puntos consecutivos."),
+        ("Broyden update", "Update rank-1 que modifica lo mínimo posible la Hessian approximation para cumplir la Secant equation."),
+        ("BFGS", "Quasi-Newton method que mantiene symmetry y positive definiteness cuando la curvature observada es consistente."),
+        ("L-BFGS", "Limited-memory BFGS: guarda sólo algunos pares recientes $(s_i,y_i)$ para trabajar con millones de parameters."),
+        ("Sherman-Morrison formula", "Identidad de linear algebra que permite actualizar una inverse approximation sin invertir una matrix desde cero."),
+        ("Nesterov Accelerated Gradient", "Variant de momentum que primero mira el punto adelantado y luego calcula el Gradient ahí."),
+        ("Subgradient", "Vector que actúa como slope válida para una convex function aunque exista una esquina."),
+        ("Subdifferential", "Set de todos los Subgradients posibles en un punto, escrito $\\partial f(x)$."),
+    ])
+
+    st.markdown("### Quasi-Newton methods")
+    plain_language(
+        "La idea central",
+        "Newton pregunta: 'si conozco la curvature exacta, qué step conviene'. Quasi-Newton pregunta algo más barato: "
+        "'si vi cómo cambió el Gradient entre dos puntos, qué curvature approximation es compatible con ese cambio'."
+    )
+    latex_aligned([
+        r"s_k=x_k-x_{k-1}",
+        r"y_k=\nabla f(x_k)-\nabla f(x_{k-1})",
+        r"B_k s_k=y_k \qquad \text{(Secant equation)}",
+    ])
+    formula_walkthrough(
+        "Lectura de la Secant equation",
+        terms={
+            r"s_k": "Cambio en position: cuánto se movió el optimizer.",
+            r"y_k": "Cambio en Gradient: cuánto cambió la slope después de ese movimiento.",
+            r"B_k": "Hessian approximation que queremos construir.",
+            r"B_k s_k=y_k": "La approximation debe transformar el movimiento observado en el cambio de Gradient observado.",
+        },
+        steps=[
+            "En una variable, derivative se estima como cambio vertical dividido por cambio horizontal.",
+            "En varias variables, esa misma idea se vuelve una matrix que relaciona cambios de position con cambios de Gradient.",
+            "Hay infinitas matrices que cumplen la Secant equation, por eso se agregan criterios como cercanía a $B_{k-1}$, symmetry o positive definiteness.",
+        ],
+        expanded=True,
+    )
+    with advanced_expander("Two phases of Levenberg-Marquardt"):
+        latex_aligned([
+            r"\lambda\ \text{large}:\quad J^\top J+\lambda I\approx \lambda I",
+            r"\lambda I\Delta\theta\approx J^\top e\quad\Rightarrow\quad \Delta\theta\approx \frac1\lambda J^\top e",
+            r"\lambda\to0:\quad J^\top J+\lambda I\approx J^\top J",
+            r"(J^\top J)\Delta\theta\approx J^\top e",
+        ])
+        st.markdown(
+            "Fase 1: lejos del optimum, large damping produce Gradient-Descent-like steps pequeños y robustos. "
+            "Fase 2: cerca del optimum, small damping recupera Gauss-Newton-like steps y convergence rápida."
+        )
+
+    st.markdown("#### Broyden update")
+    st.latex(r"B_k = B_{k-1} + \frac{(y_k-B_{k-1}s_k)s_k^\top}{s_k^\top s_k}")
+    st.markdown(
+        "Broyden elige la matrix más cercana a la anterior, medida con **Frobenius norm**, que además cumple la "
+        "**Secant equation**. Es un **rank-1 update**: suma una corrección simple en vez de reconstruir toda la matrix."
+    )
+    class_question(
+        "¿Por qué hay infinitas Hessian approximations que cumplen la Secant equation?",
+        "Porque $B_k s_k=y_k$ sólo fija lo que la matrix hace en una dirección específica: $s_k$. "
+        "Lo que ocurre en las demás direcciones queda libre. Broyden, BFGS y L-BFGS son formas distintas de escoger una opción útil dentro de ese conjunto.",
+        expanded=True,
+    )
+
+    st.markdown("#### BFGS and L-BFGS")
+    st.markdown(
+        "**BFGS** agrega dos exigencias importantes: que la Hessian approximation sea symmetric y que sea "
+        "positive definite cuando la curvature observada lo permite. Eso hace que el proposed direction sea de descent. "
+        "**L-BFGS** conserva la idea, pero no guarda una dense matrix $n\\times n$; guarda sólo los últimos $m$ pares $(s_i,y_i)$."
+    )
+    col1, col2 = lab_columns()
+    with col1:
+        n_params = st.slider("number of parameters n", 1_000, 1_000_000, 200_000, step=1_000, key="lbfgs_n")
+        history_m = st.slider("L-BFGS history m", 3, 30, 10, key="lbfgs_m")
+        bytes_per_float = st.radio("number format", ["float32", "float64"], horizontal=True, key="lbfgs_float")
+        bytes_value = 4 if bytes_per_float == "float32" else 8
+    dense_gb = (n_params**2 * bytes_value) / (1024**3)
+    lbfgs_mb = (2 * history_m * n_params * bytes_value) / (1024**2)
+    with col2:
+        metric_grid([
+            ("Dense Hessian memory", f"{dense_gb:,.1f} GB"),
+            ("L-BFGS memory", f"{lbfgs_mb:,.1f} MB"),
+            ("Stored vectors", f"{2 * history_m}"),
+        ], columns=3)
+        st.markdown(
+            "El PDF usa el ejemplo de un model con $10^6$ weights: una full Hessian tendría $10^{12}$ numbers. "
+            "Con `float32`, eso son cerca de 4 TB. L-BFGS baja el costo porque sólo recuerda historial reciente."
+        )
+    how_to_read(
+        "El slider no entrena nada; sólo muestra por qué full Newton deja de ser realista. "
+        "La diferencia entre GB/TB y MB explica por qué L-BFGS existe."
+    )
+
+    st.markdown("### Nesterov Accelerated Gradient")
+    plain_language(
+        "Momentum mira atrás; Nesterov mira adelante",
+        "Classic Momentum combina el Gradient actual con una velocity acumulada. Nesterov primero se adelanta usando esa velocity "
+        "y calcula el Gradient en el punto adelantado. Así corrige el rumbo antes de hacer el step definitivo."
+    )
+    latex_aligned([
+        r"\text{Classic Momentum:}\quad z_k=\nabla f(x_k)+\beta z_{k-1},\quad x_{k+1}=x_k-\gamma z_k",
+        r"\text{Nesterov:}\quad v^{k+1}=\beta v^k+\gamma\nabla f(x^k+\beta v^k),\quad x^{k+1}=x^k-v^{k+1}",
+    ])
+    formula_walkthrough(
+        "Nesterov step en palabras",
+        terms={
+            r"\beta v^k": "Momentum acumulado: hacia dónde venía moviéndose el algorithm.",
+            r"x^k+\beta v^k": "Look-ahead point: punto adelantado donde se evalúa el Gradient.",
+            r"\gamma": "Learning rate o step size.",
+        },
+        steps=[
+            "Se proyecta dónde quedaría el optimizer si siguiera su inertia.",
+            "Se calcula el Gradient en ese punto adelantado, no exactamente en el punto actual.",
+            "Se combina esa información con la velocity para corregir antes de avanzar.",
+        ],
+        expanded=True,
+    )
+    with advanced_expander("Momentum factor óptimo para una quadratic function"):
+        latex_aligned([
+            r"\gamma^\star=\left(\frac{2}{\sqrt{\lambda_{\max}}+\sqrt{\lambda_{\min}}}\right)^2",
+            r"\beta^\star=\left(\frac{\sqrt{\lambda_{\max}}-\sqrt{\lambda_{\min}}}{\sqrt{\lambda_{\max}}+\sqrt{\lambda_{\min}}}\right)^2",
+            r"\text{Gradient Descent factor:}\quad \left(\frac{1-b}{1+b}\right)^2",
+            r"\text{Momentum factor:}\quad \left(\frac{1-\sqrt b}{1+\sqrt b}\right)^2",
+        ])
+        st.markdown(
+            "La lectura importante no es memorizar las formulas: Momentum cambia el problema como si el condition number "
+            "pasara de $\\kappa$ a $\\sqrt{\\kappa}$. Por eso en valleys estrechos reduce iterations."
+        )
+
+    st.markdown("### Subgradients")
+    st.markdown(
+        "Muchas losses útiles son convex pero no smooth. En una esquina no hay una única tangent line. "
+        "El **Subgradient** reemplaza la idea de derivative por una familia de slopes que sostienen la graph desde abajo."
+    )
+    latex_aligned([
+        r"\text{Differentiable Convexity:}\quad f(y)\ge f(x)+\nabla f(x)^\top(y-x)",
+        r"\text{Subgradient definition:}\quad f(y)\ge f(x)+g^\top(y-x)\quad\forall y",
+        r"g\in\partial f(x)",
+    ])
+    formula_walkthrough(
+        "Qué significa $g\\in\\partial f(x)$",
+        terms={
+            r"g": "Una slope válida en el punto $x$.",
+            r"\partial f(x)": "Subdifferential: set de todas las slopes válidas en $x$.",
+            r"f(y)\ge f(x)+g^\top(y-x)": "La line construida con slope $g$ queda por debajo de la function completa.",
+        },
+        steps=[
+            "Si la function es smooth, el Subdifferential contiene sólo el Gradient usual.",
+            "Si hay una esquina, puede haber muchas slopes válidas.",
+            "El optimizer puede elegir cualquiera de esas slopes para construir un step.",
+        ],
+        expanded=True,
+    )
+    col1, col2 = lab_columns()
+    with col1:
+        nonsmooth_fn = st.radio("non-smooth function", ["absolute value", "ReLU"], key="subgrad_fn")
+        x0_sub = st.slider("point x", -2.0, 2.0, 0.0, step=0.05, key="subgrad_x")
+        g_sub = st.slider("candidate Subgradient g", -1.2, 1.2, 0.0, step=0.05, key="subgrad_g")
+    xs = np.linspace(-2.2, 2.2, 400)
+    if nonsmooth_fn == "absolute value":
+        ys = np.abs(xs)
+        y0 = abs(x0_sub)
+        valid_low, valid_high = (-1.0, 1.0) if abs(x0_sub) < 1e-9 else ((1.0, 1.0) if x0_sub > 0 else (-1.0, -1.0))
+    else:
+        ys = np.maximum(0, xs)
+        y0 = max(0.0, x0_sub)
+        valid_low, valid_high = (0.0, 1.0) if abs(x0_sub) < 1e-9 else ((1.0, 1.0) if x0_sub > 0 else (0.0, 0.0))
+    tangent = y0 + g_sub * (xs - x0_sub)
+    is_valid = valid_low - 1e-9 <= g_sub <= valid_high + 1e-9
+    with col2:
+        metric_grid([
+            ("Subdifferential", f"[{valid_low:.1f}, {valid_high:.1f}]" if valid_low != valid_high else f"{{{valid_low:.1f}}}"),
+            ("candidate g", f"{g_sub:.2f}"),
+            ("valid?", "yes" if is_valid else "no"),
+        ], columns=3)
+        fig, ax = plt.subplots(figsize=(6.8, 3.9))
+        ax.plot(xs, ys, color="#4C72B0", lw=2, label=nonsmooth_fn)
+        ax.plot(xs, tangent, color="#DD8452", lw=1.7, ls="--", label="candidate support line")
+        ax.scatter([x0_sub], [y0], color="black", s=35, zorder=5)
+        ax.set_ylim(min(-0.8, tangent.min()), max(2.4, tangent.max()))
+        ax.set_xlabel("x")
+        ax.set_ylabel("f(x)")
+        ax.legend()
+        mia_pyplot(fig); plt.close(fig)
+    how_to_read(
+        "Una candidate support line válida debe quedar bajo la curve completa. En la esquina de absolute value el set válido es [-1,1]; "
+        "en la esquina de ReLU es [0,1]. Frameworks como PyTorch o TensorFlow eligen un valor práctico para seguir aplicando chain rule."
+    )
+    st.markdown("### Subgradient method")
+    st.latex(r"x^{k+1}=x^k-\gamma_k g^k,\qquad g^k\in\partial L(x^k)")
+    st.markdown(
+        "A diferencia de Gradient Descent smooth, el negative Subgradient no garantiza que cada individual step baje la loss. "
+        "Por eso se suele guardar `f_best` y usar decreasing learning rates. En Lasso, Hinge Loss y ReLU networks, esta idea permite seguir optimizando aunque haya esquinas."
+    )
+    class_question(
+        "¿Por qué el negative Subgradient puede no bajar la function en cada step?",
+        "Porque en una esquina el Subgradient describe una support line global, no una única local tangent. "
+        "El step puede cruzar la esquina o moverse demasiado lejos. La garantía se obtiene con reglas de learning rate y análisis acumulado, no por mejora monotónica en cada iteration.",
+    )
+    ai_bridge(
+        "**L-BFGS** aparece en scientific ML y fitting cuando el dataset cabe en memoria; **NAG** y **Momentum** aparecen en optimizers modernos; "
+        "**Subgradients** explican por qué ReLU, Lasso y Hinge Loss pueden entrenarse aunque no sean differentiable en todos los puntos."
+    )
+
+
+# ==================================================================
+# SECCIÓN 23 — LOGISTIC REGRESSION Y SGD
+# ==================================================================
+def sec_logistic_sgd():
+    section_title(
+        "23. Logistic Regression and Stochastic Gradient Descent",
+        "De probability prediction con sigmoid a training con mini-batches."
+    )
+    beginner_bridge(
+        "clasificar sin esconder la matemática",
+        [
+            "Logistic Regression produce una probability entre 0 y 1.",
+            "Cross-Entropy castiga asignar baja probability a la clase correcta.",
+            "SGD actualiza parameters usando una muestra o mini-batch en vez de recorrer todo el dataset en cada step.",
+        ],
+    )
+    motivation(
+        "Esta sección conecta classification, Maximum Likelihood y optimization. La ruta completa es: "
+        "linear score $z$, sigmoid probability $p$, Cross-Entropy loss, Gradient, Full-Batch Gradient Descent y luego **SGD**."
+    )
+    prerequisites_box(
+        "- Bernoulli model y Cross-Entropy (sección 8).\n"
+        "- Gradient Descent (sección 17).\n"
+        "- Expectation como average de una random quantity (sección 9)."
+    )
+    concept_glossary([
+        ("Logistic Regression", "Classifier probabilístico que modela $P(y=1\\mid x)$ con una sigmoid aplicada a un linear score."),
+        ("linear score", "Número $z=w^\\top x+b$ antes de convertirlo en probability."),
+        ("sigmoid", "Function $\\sigma(z)=1/(1+e^{-z})$ que convierte cualquier real en un número entre 0 y 1."),
+        ("Cross-Entropy", "Negative log-likelihood para Bernoulli labels; penaliza confidence equivocada."),
+        ("Full-Batch Gradient Descent", "Update que usa todos los $N$ examples para calcular un Gradient exacto de la empirical loss."),
+        ("Stochastic Gradient Descent (SGD)", "Update que usa un random example o mini-batch para estimar el Gradient."),
+        ("mini-batch", "Subset aleatorio de examples usado para una update."),
+        ("Step", "Una update de parameters."),
+        ("Epoch", "Un recorrido completo del dataset; con batch size $B$ son aproximadamente $N/B$ steps."),
+        ("unbiased estimator", "Estimador cuyo average esperado coincide con la quantity exacta que quiere aproximar."),
+    ])
+
+    st.markdown("### Logistic Regression")
+    latex_aligned([
+        r"z_i=w^\top x_i+b",
+        r"p_i=P(y_i=1\mid x_i)=\sigma(z_i)=\frac{1}{1+e^{-z_i}}",
+        r"L(w,b)=-\sum_i\left[y_i\log p_i+(1-y_i)\log(1-p_i)\right]",
+    ])
+    formula_walkthrough(
+        "Cross-Entropy en palabras",
+        terms={
+            r"y_i": "Label real: 1 para clase positiva, 0 para clase negativa.",
+            r"p_i": "Probability que el model asigna a la clase positiva.",
+            r"-\log p_i": "Penalty cuando el label real es 1.",
+            r"-\log(1-p_i)": "Penalty cuando el label real es 0.",
+        },
+        steps=[
+            "Primero se calcula el linear score $z_i$.",
+            "La sigmoid transforma ese score en una probability.",
+            "Si el label es 1, queremos $p_i$ grande; si el label es 0, queremos $p_i$ pequeño.",
+            "Cross-Entropy crece mucho cuando el model está confiado y equivocado.",
+        ],
+        expanded=True,
+    )
+    with advanced_expander("Derivación: De Bernoulli a Cross-Entropy"):
+        st.markdown(
+            "El PDF deriva la Cross-Entropy loss paso a paso. Esta derivación justifica por qué la loss tiene "
+            "exactamente esa forma y no otra."
+        )
+        st.markdown("**Paso 1: Truco de Bernoulli**")
+        st.markdown(
+            "Como $y_i \\in \\{0,1\\}$, podemos escribir la probabilidad de la etiqueta correcta en una sola línea:"
+        )
+        st.latex(r"P(Y=y_i\mid x_i)=p_i^{y_i}(1-p_i)^{1-y_i}")
+        st.markdown(
+            "Si $y_i=1$: el factor $(1-p_i)^0=1$ desaparece y queda $p_i$. "
+            "Si $y_i=0$: el factor $p_i^0=1$ desaparece y queda $(1-p_i)$."
+        )
+        st.markdown("**Paso 2: Función de Verosimilitud (N observaciones independientes)**")
+        st.latex(r"L(w,b)=\prod_{i=1}^N p_i^{y_i}(1-p_i)^{1-y_i}")
+        st.markdown("**Paso 3: Log-Verosimilitud y cambio de signo**")
+        st.latex(r"\log L=\sum_{i=1}^N\left[y_i\log p_i+(1-y_i)\log(1-p_i)\right]")
+        st.markdown(
+            "Multiplicamos por $-1$ porque el Descenso del Gradiente **minimiza**. "
+            "La Log-Verosimilitud Negativa es la **Cross-Entropy Loss**:"
+        )
+        st.latex(r"\mathcal{L}(w,b)=-\sum_{i=1}^N\left[y_i\log p_i+(1-y_i)\log(1-p_i)\right]")
+        st.markdown("**Paso 4: Simplificación usando $z_i = w^\\top x_i + b$**")
+        latex_aligned([
+            r"\log p_i = z_i - \log(1+e^{z_i})",
+            r"\log(1-p_i) = -\log(1+e^{z_i})",
+        ])
+        st.markdown("Reemplazando y expandiendo:")
+        latex_aligned([
+            r"\mathcal{L}=-\!\sum_i\!\left[y_i\!\left(z_i-\log(1+e^{z_i})\right)-(1-y_i)\log(1+e^{z_i})\right]",
+            r"=-\!\sum_i\!\left[y_iz_i-y_i\log(1+e^{z_i})-\log(1+e^{z_i})+y_i\log(1+e^{z_i})\right]",
+        ])
+        st.markdown("Los términos $\\pm y_i\\log(1+e^{z_i})$ se cancelan mágicamente:")
+        st.latex(r"\mathcal{L}(w,b)=\sum_{i=1}^N\!\left[\log\!\left(1+e^{z_i}\right)-y_iz_i\right]")
+        insight(
+            "Este resultado tiene una forma elegante porque el logaritmo convierte el producto de Bernoulli en suma "
+            "y hace que los términos cruzados se anulen. El resultado es Softplus menos un término lineal: "
+            "estrictamente convexo en $w$ y $b$."
+        )
+    with advanced_expander("Convexidad de la Cross-Entropy (Softplus)"):
+        latex_aligned([
+            r"L(w,b)=\sum_i\left[\log(1+\exp(z_i))-y_i z_i\right]",
+            r"\frac{d^2}{dz^2}\log(1+\exp z)=\sigma(z)(1-\sigma(z))\ge 0",
+        ])
+        st.markdown(
+            "$\\log(1+\\exp z)$ es **Softplus**: su segunda derivada respecto a $z$ es exactamente la varianza de la "
+            "predicción Bernoulli $p(1-p) > 0$, por lo tanto es estrictamente convexa. "
+            "El término $-y_i z_i$ es afín; sumar términos afines no destruye la convexidad. "
+            "Consecuencia: el problema de Regresión Logística tiene un único mínimo global."
+        )
+    st.markdown("### Gradient and Full-Batch Update")
+    latex_aligned([
+        r"\nabla_w L=\sum_i(p_i-y_i)x_i",
+        r"\frac{\partial L}{\partial b}=\sum_i(p_i-y_i)",
+        r"w^{k+1}=w^k-\gamma_k\sum_i(p_i^k-y_i)x_i",
+        r"b^{k+1}=b^k-\gamma_k\sum_i(p_i^k-y_i)",
+    ])
+    plain_language(
+        "Lectura del término $(p_i-y_i)$",
+        "Si el label es 1 y el model predice $p_i=0.2$, entonces $p_i-y_i=-0.8$: el update empuja el score hacia arriba. "
+        "Si el label es 0 y el model predice $p_i=0.9$, entonces $p_i-y_i=0.9$: el update empuja el score hacia abajo."
+    )
+    pitfall(
+        "**Problema en Big Data.** Para dar un solo paso hacia el mínimo, "
+        "el Full-Batch update necesita calcular $p_i^{(k)}$ y acumular la suma vectorial sobre los $N$ ejemplos. "
+        "Con $N = 1{,}000{,}000$ de registros clínicos, eso implica un millón de evaluaciones exponenciales "
+        "y productos punto sólo para actualizar los pesos una vez. El método clásico colapsa. La solución es SGD."
+    )
+
+    interactive_header("Sigmoid, Cross-Entropy and Gradient signal")
+    lab_task(
+        predict="la penalty crece mucho cuando la prediction está confiada y equivocada.",
+        manipulate="mueve score z y label y.",
+        verify="observa probability, loss y Gradient signal.",
+    )
+    col1, col2 = lab_columns()
+    with col1:
+        z_demo = st.slider("linear score z", -8.0, 8.0, 0.0, step=0.1, key="log_z")
+        y_demo = st.radio("label y", [0, 1], horizontal=True, key="log_y")
+    p_demo = 1 / (1 + np.exp(-z_demo))
+    ce_demo = -(y_demo * np.log(p_demo + 1e-12) + (1 - y_demo) * np.log(1 - p_demo + 1e-12))
+    grad_demo = p_demo - y_demo
+    with col2:
+        metric_grid([
+            ("probability p", f"{p_demo:.3f}"),
+            ("Cross-Entropy", f"{ce_demo:.3f}"),
+            ("Gradient signal p-y", f"{grad_demo:.3f}"),
+        ], columns=3)
+        zz = np.linspace(-8, 8, 300)
+        pp = 1 / (1 + np.exp(-zz))
+        ce0 = -np.log(1 - pp + 1e-12)
+        ce1 = -np.log(pp + 1e-12)
+        fig, ax = plt.subplots(figsize=(6.8, 3.8))
+        ax.plot(zz, ce0, label="Cross-Entropy if y=0", color="#4C72B0")
+        ax.plot(zz, ce1, label="Cross-Entropy if y=1", color="#DD8452")
+        ax.axvline(z_demo, color="black", lw=1, ls="--")
+        ax.set_xlabel("linear score z")
+        ax.set_ylabel("loss")
+        ax.set_ylim(0, 8)
+        ax.legend(fontsize=8)
+        mia_pyplot(fig); plt.close(fig)
+
+    st.markdown("### SGD and mini-batches")
+    latex_aligned([
+        r"L(\theta)=\frac1N\sum_{i=1}^N \ell_i(\theta)",
+        r"\text{SGD }(B=1):\quad \theta^{k+1}=\theta^k-\gamma_k\nabla \ell_j(\theta^k),\quad j\sim\text{Uniform}\{1,\dots,N\}",
+        r"\text{Mini-Batch SGD:}\quad \theta^{k+1}=\theta^k-\gamma_k\frac1B\sum_{i\in\mathcal B_k}\nabla\ell_i(\theta^k)",
+    ])
+    formula_walkthrough(
+        "Por qué SGD estima el Gradient correcto",
+        formula=r"\mathbb E[\nabla\ell_j(\theta)]=\sum_{i=1}^N \nabla\ell_i(\theta)P(j=i)=\frac1N\sum_{i=1}^N\nabla\ell_i(\theta)=\nabla L(\theta)",
+        terms={
+            r"j": "Random index elegido uniformemente.",
+            r"\nabla\ell_j(\theta)": "Gradient de un single example.",
+            r"\mathbb E[\cdot]": "Average esperado si repitieras el random draw muchas veces.",
+            r"\nabla L(\theta)": "Full Gradient de la empirical loss promedio.",
+        },
+        steps=[
+            "Un single example entrega una direction ruidosa.",
+            "Pero si el example se elige al azar de forma uniforme, el average esperado coincide con el full Gradient.",
+            "Un mini-batch reduce noise porque promedia varios single-example Gradients.",
+        ],
+        expanded=True,
+    )
+    col1, col2 = lab_columns()
+    with col1:
+        dataset_n = st.slider("dataset size N", 1_000, 1_000_000, 100_000, step=1_000, key="sgd_n")
+        batch_b = st.slider("batch size B", 1, 1024, 64, key="sgd_b")
+        grad_noise = st.slider("single-example Gradient std", 0.1, 5.0, 1.0, step=0.1, key="sgd_noise")
+    steps_per_epoch = int(np.ceil(dataset_n / batch_b))
+    relative_std = grad_noise / np.sqrt(batch_b)
+    full_cost_ratio = dataset_n / batch_b
+    with col2:
+        metric_grid([
+            ("steps per Epoch", f"{steps_per_epoch:,}"),
+            ("relative Gradient std", f"{relative_std:.3f}"),
+            ("Full-Batch cost / mini-batch cost", f"{full_cost_ratio:,.0f}x"),
+        ], columns=3)
+        bs = np.array([1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024])
+        fig, ax = plt.subplots(figsize=(6.8, 3.8))
+        ax.plot(bs, grad_noise / np.sqrt(bs), "o-", color="#4C72B0")
+        ax.axvline(batch_b, color="#DD8452", ls="--", lw=1.5)
+        ax.set_xscale("log", base=2)
+        ax.set_xlabel("batch size B")
+        ax.set_ylabel("Gradient noise scale")
+        ax.set_title("Mini-batch variance reduction")
+        mia_pyplot(fig); plt.close(fig)
+    how_to_read(
+        "Aumentar batch size reduce noise como $1/\\sqrt B$, pero también hace cada step más caro. "
+        "Por eso valores como 32, 64 o 256 son comunes: equilibran hardware efficiency y stochastic signal."
+    )
+    st.markdown("### Loss Functions para SGD")
+    st.markdown(
+        "Para aplicar SGD, la pérdida total debe poder separarse como $L(\\theta)=\\sum_i \\ell_i(\\theta)$. "
+        "Las tres más comunes en IA son:"
+    )
+    latex_aligned([
+        r"\text{Square Loss (regresión):}\quad \ell_i(\theta)=\tfrac12\|y_i-f(x_i;\theta)\|_2^2",
+        r"\text{Cross-Entropy (clasificación):}\quad \ell_i(\theta)=-\left[y_i\log\hat y_i+(1-y_i)\log(1-\hat y_i)\right]",
+        r"\text{Hinge Loss (SVM):}\quad \ell_i(\theta)=\max\{0,\,1-y_i f(x_i;\theta)\},\quad y_i\in\{-1,1\}",
+    ])
+    plain_language(
+        "Hinge Loss en palabras simples",
+        "Imagina que estás separando manzanas y naranjas con una regla sobre la mesa. "
+        "La regla no solo quiere acertar: quiere que haya un espacio vacío a cada lado — ese espacio es el **margen**. "
+        "Si una fruta queda bien lejos de la regla (margen amplio), la Hinge Loss dice 'perfecto, sin penalización'. "
+        "Si la fruta cae justo sobre la regla o al lado equivocado, hay penalización proporcional a qué tan mal está.\n\n"
+        "Para hacer esto funcionar matemáticamente, las etiquetas se escriben como $y_i \\in \\{-1, +1\\}$ "
+        "en lugar del $\\{0, 1\\}$ habitual. El signo indica a qué lado de la regla debe caer cada ejemplo: "
+        "si $y_i = +1$ el ejemplo debe quedar donde $f > 0$, y viceversa. "
+        "Así el producto $y_i \\cdot f(x_i)$ es positivo cuando el ejemplo está en el lado correcto y negativo cuando no."
+    )
+    formula_walkthrough(
+        "Término a término: Hinge Loss",
+        formula=r"\ell_i(\theta)=\max\{0,\;1-y_i\,f(x_i;\theta)\}",
+        terms={
+            r"y_i": "Etiqueta real del ejemplo $i$: vale $+1$ o $-1$.",
+            r"f(x_i;\theta)": "Puntuación que el modelo asigna al ejemplo $i$ (puede ser positiva o negativa).",
+            r"y_i\,f(x_i;\theta)": "**Producto de margen.** Si es $> 1$: ejemplo bien clasificado con margen suficiente. Si es $< 1$: dentro o al lado equivocado de la frontera.",
+            r"1 - y_i f": "Cuánto falta para alcanzar el margen mínimo. Es negativo cuando el margen ya es suficiente.",
+            r"\max\{0,\,\cdot\}": "Sólo cuenta la penalización cuando es positiva. Ejemplos perfectamente clasificados contribuyen **cero** a la pérdida.",
+        },
+        steps=[
+            "Un ejemplo bien clasificado con margen amplio ($y_i f > 1$) produce $1 - y_i f < 0$, así que $\\max\\{0, \\cdot\\} = 0$: sin costo.",
+            "Un ejemplo en la frontera exacta ($y_i f = 1$) produce $\\max\\{0, 0\\} = 0$: tampoco penaliza.",
+            "Un ejemplo mal clasificado ($y_i f < 0$) produce $1 - y_i f > 1$: penalización grande.",
+            "SGD sólo recibe gradient de los ejemplos con pérdida positiva (los mal clasificados o con margen insuficiente). Los 'ya correctos' no empujan en ninguna dirección.",
+        ],
+        expanded=True,
+    )
+    pitfall(
+        "La Hinge Loss no es differentiable en el punto $y_i f = 1$ (el 'codo' del $\\max$). "
+        "Ahí se usa un **subgradient** en lugar de gradient ordinario — exactamente el mismo concepto de la sección de Subgradients."
+    )
+
+    st.markdown("### Modern SGD Variants")
+    st.markdown("**SGD con Momentum**")
+    plain_language(
+        "La idea de fondo: una pelota que rueda colina abajo",
+        "Imagina que sueltas una pelota en una colina ondulada. Si la sueltas y cada paso la empujas "
+        "exactamente hacia donde apunta la cuesta en ese instante, la pelota puede rebotar: "
+        "un mini-batch dice 've a la derecha', el siguiente dice 've a la izquierda', y la pelota zigzaguea sin avanzar bien.\n\n"
+        "**Momentum** agrega memoria de dirección. La pelota acumula velocidad en las direcciones en que ha "
+        "venido rodando. Si muchos mini-batches consecutivos apuntan hacia el valle, la velocidad en esa dirección "
+        "crece; si los gradientes son contradictorios (ruido puro), se cancelan y la pelota avanza poco.\n\n"
+        "El parámetro $\\beta$ controla cuánta memoria tiene la pelota: $\\beta = 0$ es SGD puro (sin memoria), "
+        "$\\beta = 0.9$ es el valor típico en redes neuronales, donde el 90% de la velocidad anterior se conserva."
+    )
+    latex_aligned([
+        r"v^{k+1}=\beta v^k+\nabla\ell_{i_k}(\theta^k)",
+        r"\theta^{k+1}=\theta^k-\gamma v^{k+1}",
+    ])
+    formula_walkthrough(
+        "Término a término: SGD con Momentum",
+        terms={
+            r"v^k": "**Velocidad** en el paso $k$. Acumula el historial ponderado de gradientes pasados. Empieza en $v^0 = 0$.",
+            r"\beta": "**Factor de olvido.** Qué fracción de la velocidad anterior se conserva. Típicamente $0.9$.",
+            r"\beta v^k": "La velocidad que viene del pasado, atenuada. A mayor $\\beta$, más 'inercia'.",
+            r"\\nabla\\ell_{i_k}(\\theta^k)": "Gradient del mini-batch actual: el empujón que viene del dato de hoy.",
+            r"v^{k+1}": "Nueva velocidad: suma del impulso pasado más el empujón de hoy.",
+            r"\gamma": "Learning rate: cuánto se mueve $\\theta$ por unidad de velocidad.",
+            r"\\theta^{k+1}": "Nuevos parámetros: se mueven en la dirección de la velocidad acumulada, no sólo del gradiente puntual.",
+        },
+        steps=[
+            "Cada paso suma al historial la dirección de hoy.",
+            "Si tres pasos seguidos apuntan al norte, la velocidad norte crece: el modelo avanza más rápido.",
+            "Si un paso apunta al norte y el siguiente al sur (ruido), se cancelan: la velocidad neta es pequeña.",
+            "El resultado práctico: Momentum estabiliza trayectorias ruidosas y acelera el progreso en valles elongados.",
+        ],
+        expanded=True,
+    )
+    concept_glossary([
+        ("AdaGrad / RMSProp", "Adaptive-rate methods que escalan el learning rate por parámetro usando historial de squared Gradients; parámetros con gradientes históricamente grandes reciben pasos más pequeños."),
+        ("Adam", "Optimizer estándar actual: combina una media móvil del gradiente (Momentum) y una media móvil del gradiente al cuadrado (RMSProp). Es el estado del arte para redes neuronales profundas."),
+    ], title="Variantes avanzadas", expanded=True)
+
+    with advanced_expander("Condiciones de Robbins-Monro y convergencia de SGD"):
+        beginner_bridge(
+            "¿por qué el learning rate tiene que ir bajando?",
+            [
+                "SGD usa sólo un mini-batch para estimar el gradiente. Ese estimado tiene **ruido**: apunta más o menos bien, pero nunca exacto.",
+                "Si el learning rate $\\gamma$ es constante, el algoritmo sigue dando pasos del mismo tamaño aunque ya esté cerca del mínimo. "
+                "Como los pasos tienen ruido, el modelo nunca se queda quieto: **orbita** el mínimo como un planeta que no puede aterrizar.",
+                "La solución: hacer que los pasos se vuelvan cada vez más pequeños con el tiempo. "
+                "Así el ruido de cada paso importa menos, y la trayectoria se asienta en el mínimo.",
+                "Pero no pueden bajar demasiado rápido: si los pasos se hacen pequeños antes de que el modelo llegue al mínimo, se detiene lejos. "
+                "Hay que encontrar la velocidad de decaimiento correcta — eso es lo que regulan las condiciones de Robbins-Monro.",
+            ]
+        )
+        st.markdown(
+            "Para garantizar que SGD converja al mínimo exacto, la tasa de aprendizaje $\\gamma_k$ "
+            "(el tamaño del paso en la iteración $k$) debe satisfacer dos condiciones simultáneas:"
+        )
+        latex_aligned([
+            r"\sum_{k=1}^\infty \gamma_k=\infty\quad\text{(los pasos son suficientemente largos para llegar al mínimo)}",
+            r"\sum_{k=1}^\infty \gamma_k^2<\infty\quad\text{(la varianza del ruido desaparece eventualmente)}",
+        ])
+        notation_box([
+            (r"\sum_{k=1}^\infty \gamma_k = \infty",
+             "La suma total de todos los pasos futuros es infinita. Esto garantiza que el algoritmo puede llegar "
+             "a cualquier punto del espacio, por lejos que esté. Si la suma fuera finita, el modelo se 'quedaría sin gasolina' antes de llegar."),
+            (r"\sum_{k=1}^\infty \gamma_k^2 < \infty",
+             "La suma de los cuadrados es finita. Esto hace que el ruido acumulado sea controlable: "
+             "los pasos pequeños tienen ruido pequeño, y ese ruido se 'agota' con el tiempo en lugar de acumularse indefinidamente."),
+        ])
+        st.markdown(
+            "**Ejemplo concreto:** $\\gamma_k = c/k$ cumple ambas. "
+            "La serie $\\sum 1/k$ diverge (primera condición ✓) "
+            "y $\\sum 1/k^2 = \\pi^2/6 \\approx 1.645$ converge (segunda condición ✓). "
+            "En la práctica se suele usar $\\gamma_k = c/(k + c_0)$ o esquemas escalonados ('step decay') "
+            "que aproximan este comportamiento."
+        )
+        pitfall(
+            "Una tasa $\\gamma_k$ constante no satisface la segunda condición: $\\sum \\gamma^2 = \\infty$. "
+            "SGD con tasa fija nunca converge al mínimo exacto — orbita con un radio proporcional a $\\gamma \\cdot \\sigma_{\\text{ruido}}$. "
+            "En la práctica se acepta este trade-off: tasa fija converge más rápido al inicio, pero oscila en la fase final."
+        )
+        insight(
+            "**Propiedad inesperada: Generalización.** Se ha observado empíricamente que el ruido de SGD ayuda a las "
+            "redes neuronales a escapar de mínimos locales pobres y encontrar soluciones que generalizan mejor a datos nuevos, "
+            "a diferencia del descenso de gradiente exacto que converge al mínimo más cercano sin importar su calidad."
+        )
+    class_question(
+        "¿Por qué SGD puede generalizar mejor que Full-Batch Gradient Descent?",
+        "El noise del mini-batch no es sólo un defecto: puede ayudar a escapar de poor local minima o sharp regions. "
+        "No garantiza generalization por sí mismo, pero en deep learning suele actuar como regularization implícita junto con batch size, learning rate y architecture.",
+    )
+    ai_bridge(
+        "El training moderno usa esta cadena casi completa: Cross-Entropy para classification, mini-batches para escalar a Big Data, "
+        "Momentum o Adam para estabilizar directions ruidosas, y learning rate schedules para controlar convergence."
+    )
+
+
+# ==================================================================
+# SECCIÓN 24 — CONSTRAINED OPTIMIZATION, KKT Y QUADRATIC PROGRAMS
+# ==================================================================
+def sec_constrained_kkt_qp():
+    section_title(
+        "24. Constrained Optimization, KKT and Quadratic Programs",
+        "Qué cambia cuando no basta minimizar: también hay constraints que deben cumplirse."
+    )
+    beginner_bridge(
+        "optimizar con reglas",
+        [
+            "Un optimizer sin constraints puede moverse a cualquier punto.",
+            "Con constraints, sólo puede elegir puntos feasible.",
+            "KKT conditions dicen cuándo un feasible point es optimum y qué constraints están realmente activas.",
+        ],
+    )
+    motivation(
+        "Esta sección cubre constrained optimization: SVM, LASSO, Lagrangian, duality, KKT conditions y "
+        "quadratic minimization with linear constraints. Este lenguaje es central para SVM, regularization, safety constraints y resource allocation."
+    )
+    prerequisites_box(
+        "- Convexity y affine functions (sección 20).\n"
+        "- Gradient y Hessian (sección 19).\n"
+        "- Linear algebra: matrix-vector products y linear systems."
+    )
+    concept_glossary([
+        ("constrained optimization", "Optimization problem donde se minimiza una objective respetando equality constraints e inequality constraints."),
+        ("feasible set", "Set de puntos que cumplen todas las constraints."),
+        ("equality constraint", "Regla del tipo $h_i(\\theta)=0$."),
+        ("inequality constraint", "Regla del tipo $g_j(\\theta)\\le 0$."),
+        ("Lagrangian", "Function que combina objective y constraints usando Lagrange multipliers."),
+        ("primal problem", "Optimization problem original."),
+        ("dual problem", "Problem construido desde el Lagrangian que entrega bounds y, bajo condiciones, el mismo optimum."),
+        ("weak duality", "El dual optimum nunca supera al primal optimum en minimization."),
+        ("strong duality", "Primal optimum y dual optimum coinciden."),
+        ("Slater condition", "Condition para convex problems: existe un strictly feasible point para inequalities."),
+        ("KKT conditions", "Stationarity, primal feasibility, dual feasibility y complementary slackness."),
+        ("Schur complement", "Técnica para resolver block linear systems eliminando variables."),
+    ])
+
+    st.markdown("### General form")
+    latex_aligned([
+        r"\min_{\theta\in\mathbb R^n} f(\theta)",
+        r"\text{subject to}\quad h_i(\theta)=0,\quad g_j(\theta)\le 0",
+        r"C=\{\theta: h_i(\theta)=0,\ g_j(\theta)\le 0\}",
+    ])
+    st.markdown(
+        "Si $C$ está vacío, no existe feasible solution. Si $C$ existe, el optimizer debe buscar el menor objective dentro de ese set, no en todo el espacio."
+    )
+    with st.expander("Ejemplos: SVM y LASSO", expanded=True):
+        st.markdown("**SVM** usa margin constraints:")
+        latex_aligned([
+            r"\min_{w,b}\frac12\|w\|^2",
+            r"\text{subject to}\quad y_i(w^\top x_i+b)\ge 1",
+            r"g_i(w,b)=1-y_i(w^\top x_i+b)\le 0",
+        ])
+        st.markdown("**LASSO** puede verse como Least Squares con an $L_1$ constraint:")
+        latex_aligned([
+            r"\min_w \frac12\|y-Xw\|_2^2",
+            r"\text{subject to}\quad \sum_j |w_j|-t\le 0",
+        ])
+        st.markdown("El hyperparameter $t$ controla sparsity: con menor $t$, más coefficients quedan empujados hacia zero.")
+
+    st.markdown("### Characteristic function and Lagrangian")
+    latex_aligned([
+        r"\chi_C(\theta)=\begin{cases}0,&\theta\in C\\ \infty,&\theta\notin C\end{cases}",
+        r"\min_\theta f(\theta)+\chi_C(\theta)",
+        r"\mathcal L(\theta,\lambda,\mu)=f(\theta)+\sum_i\lambda_i h_i(\theta)+\sum_j\mu_j g_j(\theta),\quad \mu_j\ge0",
+    ])
+    formula_walkthrough(
+        "Por qué el Lagrangian representa constraints",
+        formula=r"\chi_C(\theta)=\sup_{\mu\ge0,\lambda}\left(\sum_i\lambda_i h_i(\theta)+\sum_j\mu_j g_j(\theta)\right)",
+        terms={
+            r"\lambda_i": "Lagrange multiplier para equality constraint; puede ser positivo o negativo.",
+            r"\mu_j": "Lagrange multiplier para inequality constraint; debe ser nonnegative.",
+            r"\sup": "Valor máximo posible al elegir multipliers.",
+        },
+        steps=[
+            "Si todas las constraints se cumplen, los terms de violation no pueden hacer crecer el valor sobre 0.",
+            "Si una equality se viola, un multiplier libre puede amplificar esa violation sin límite.",
+            "Si una inequality tiene $g_j(\\theta)>0$, un nonnegative multiplier puede llevar el valor a infinity.",
+        ],
+        expanded=True,
+    )
+
+    st.markdown("### Duality")
+    latex_aligned([
+        r"q(\lambda,\mu)=\inf_\theta \mathcal L(\theta,\lambda,\mu)",
+        r"\sup_{\lambda,\mu\ge0}\inf_\theta \mathcal L(\theta,\lambda,\mu)\le \inf_\theta\sup_{\lambda,\mu\ge0}\mathcal L(\theta,\lambda,\mu)",
+    ])
+    plain_language(
+        "Cómo leer weak duality",
+        "El dual problem entrega un lower bound para el primal optimum. Si strong duality vale, ese lower bound alcanza exactamente el valor primal. "
+        "En convex problems, Slater condition suele ser la puerta para tener strong duality."
+    )
+    class_question(
+        "¿Por qué la dual function siempre es concave?",
+        "Porque $q(\\lambda,\\mu)$ se obtiene como infimum de functions affine en los multipliers. "
+        "El infimum de affine functions es concave, incluso si el primal problem no fuera convex.",
+    )
+
+    st.markdown("### KKT conditions")
+    latex_aligned([
+        r"\nabla f(\theta^\star)+\sum_i\lambda_i^\star\nabla h_i(\theta^\star)+\sum_j\mu_j^\star\nabla g_j(\theta^\star)=0\quad\text{(Stationarity)}",
+        r"h_i(\theta^\star)=0,\quad g_j(\theta^\star)\le0\quad\text{(Primal feasibility)}",
+        r"\mu_j^\star\ge0\quad\text{(Dual feasibility)}",
+        r"\mu_j^\star g_j(\theta^\star)=0\quad\text{(Complementary slackness)}",
+    ])
+    formula_walkthrough(
+        "Complementary slackness sin atajos",
+        terms={
+            r"g_j(\theta^\star)<0": "Constraint inactive: sobra espacio; no está limitando el optimum.",
+            r"g_j(\theta^\star)=0": "Constraint active: el optimum toca el boundary.",
+            r"\mu_j^\star": "Precio shadow de la constraint; cuánto importa esa restriction localmente.",
+        },
+        steps=[
+            "El producto $\\mu_j^\\star g_j(\\theta^\\star)=0$ obliga a que al menos uno de los dos factors sea zero.",
+            "Si la constraint está inactive, entonces $g_j(\\theta^\\star)<0$ y necesariamente $\\mu_j^\\star=0$.",
+            "Si $\\mu_j^\\star>0$, entonces la constraint debe estar active: $g_j(\\theta^\\star)=0$.",
+        ],
+        expanded=True,
+    )
+    st.markdown(
+        "Para convex optimization con convex inequalities, affine equalities y Slater condition, KKT conditions son necesarias y suficientes. "
+        "En quadratic programs con affine constraints, resolver KKT equivale a resolver primal y dual sin duality gap."
+    )
+
+    with advanced_expander("KKT Equivalence Theorem para restricciones afines"):
+        st.markdown(
+            "Para restricciones afines (caso de SVM y LASSO), existe un resultado más fuerte que la "
+            "necesidad/suficiencia individual de KKT:"
+        )
+        st.markdown("**Teorema de Optimalidad**")
+        st.markdown(
+            "Si $f$ es convexa y las funciones $g_i$ son **afines** para $i\\in\\{1,\\ldots,m\\}$, "
+            "entonces los siguientes puntos son **equivalentes**:\n\n"
+            "1. $(x^\\star, \\lambda^\\star)$ satisfacen las condiciones KKT.\n\n"
+            "2. $x^\\star$ es el óptimo del problema primal y $\\lambda^\\star$ es el óptimo del problema dual."
+        )
+        insight(
+            "**Implicación para SVM:** este teorema garantiza que no hay duality gap. "
+            "Resolver el dual es exactamente resolver el problema original. "
+            "Por eso los algoritmos de SVM pueden trabajar directamente con los multiplicadores $\\mu_i > 0$ "
+            "(los support vectors) en lugar de los pesos $w$, y obtener la misma solución."
+        )
+        st.markdown(
+            "**¿Por qué importa que las restricciones sean afines?** "
+            "Las restricciones afines son convexas por definición y satisfacen automáticamente la condición de Slater "
+            "si el conjunto factible es no vacío. "
+            "Esto garantiza strong duality $p^\\star = d^\\star$ sin verificar condiciones adicionales."
+        )
+        pitfall(
+            "Este resultado no aplica a restricciones no afines (e.g., cuadráticas o de cono). "
+            "En esos casos hay que verificar Slater explícitamente para garantizar strong duality."
+        )
+
+    st.markdown("### Quadratic minimization with one linear constraint")
+    st.latex(r"\min_{x_1,x_2} F(x)=x_1^2+x_2^2\quad\text{subject to}\quad a_1x_1+a_2x_2=b")
+    latex_aligned([
+        r"\mathcal L(x,\lambda)=x_1^2+x_2^2+\lambda(a_1x_1+a_2x_2-b)",
+        r"x_1^\star=\frac{a_1b}{a_1^2+a_2^2},\qquad x_2^\star=\frac{a_2b}{a_1^2+a_2^2}",
+        r"F(x^\star)=\frac{b^2}{a_1^2+a_2^2},\qquad \frac{d}{db}F(x^\star)=-\lambda^\star",
+    ])
+    col1, col2 = lab_columns()
+    with col1:
+        a1_qp = st.slider("constraint coefficient a1", -4.0, 4.0, 2.0, step=0.1, key="qp_a1")
+        a2_qp = st.slider("constraint coefficient a2", -4.0, 4.0, 1.0, step=0.1, key="qp_a2")
+        b_qp = st.slider("constraint level b", -5.0, 5.0, 2.0, step=0.1, key="qp_b")
+    denom = a1_qp**2 + a2_qp**2
+    if denom < 1e-9:
+        with col2:
+            st.warning("Choose at least one nonzero constraint coefficient.")
+    else:
+        xstar = np.array([a1_qp * b_qp / denom, a2_qp * b_qp / denom])
+        lam_star = -2 * b_qp / denom
+        fstar = b_qp**2 / denom
+        with col2:
+            metric_grid([
+                ("x1*", f"{xstar[0]:.3f}"),
+                ("x2*", f"{xstar[1]:.3f}"),
+                ("lambda*", f"{lam_star:.3f}"),
+                ("F(x*)", f"{fstar:.3f}"),
+            ], columns=4)
+            grid = np.linspace(-4, 4, 300)
+            fig, ax = plt.subplots(figsize=(6.8, 4.2))
+            xx, yy = np.meshgrid(grid, grid)
+            zz = xx**2 + yy**2
+            ax.contour(xx, yy, zz, levels=16, cmap="viridis")
+            if abs(a2_qp) > 1e-9:
+                line_y = (b_qp - a1_qp * grid) / a2_qp
+                ax.plot(grid, line_y, color="#DD8452", lw=2, label="linear constraint")
+            else:
+                ax.axvline(b_qp / a1_qp, color="#DD8452", lw=2, label="linear constraint")
+            ax.scatter([0], [0], color="#94A3B8", s=35, label="unconstrained minimum")
+            ax.scatter([xstar[0]], [xstar[1]], color="black", s=45, label="constrained optimum")
+            ax.set_xlim(-4, 4); ax.set_ylim(-4, 4)
+            ax.set_xlabel("x1"); ax.set_ylabel("x2")
+            ax.legend(fontsize=8)
+            mia_pyplot(fig); plt.close(fig)
+    how_to_read(
+        "Las contours son circles de igual objective. La line es el feasible set. El optimum constrained es el punto de la line más cercano al origin."
+    )
+
+    st.markdown("### General quadratic program with linear constraints")
+    latex_aligned([
+        r"\min_x \frac12 x^\top Sx\quad\text{subject to}\quad A^\top x=b",
+        r"\mathcal L(x,\lambda)=\frac12x^\top Sx+\lambda^\top(A^\top x-b)",
+        r"\frac{\partial\mathcal L}{\partial x}=Sx+A\lambda=0,\qquad \frac{\partial\mathcal L}{\partial\lambda}=A^\top x-b=0",
+        r"\begin{bmatrix}S&A\\A^\top&0\end{bmatrix}\begin{bmatrix}x\\\lambda\end{bmatrix}=\begin{bmatrix}0\\b\end{bmatrix}",
+    ])
+    with advanced_expander("Schur complement solution and saddle point"):
+        latex_aligned([
+            r"\lambda^\star=-(A^\top S^{-1}A)^{-1}b",
+            r"x^\star=S^{-1}A(A^\top S^{-1}A)^{-1}b",
+            r"F(x^\star)=\frac12 b^\top(A^\top S^{-1}A)^{-1}b",
+            r"\frac{\partial F}{\partial b}=(A^\top S^{-1}A)^{-1}b=-\lambda^\star",
+            r"\max_\lambda\min_x \mathcal L(x,\lambda)=\min_x\max_\lambda \mathcal L(x,\lambda)",
+        ])
+        st.markdown(
+            "El Lagrangian es convex en $x$ y concave en $\\lambda$. El optimum aparece como **saddle point**: "
+            "mínimo al mover $x$ y máximo al mover $\\lambda$."
+        )
+    self_check_header()
+    quiz(
+        "En KKT, si una inequality constraint está inactive en el optimum, ¿qué debe pasar con su multiplier?",
+        ["Debe ser negative", "Debe ser zero", "Debe ser infinite"],
+        1,
+        "Complementary slackness exige $\\mu_j g_j(\\theta^\\star)=0$. Si $g_j(\\theta^\\star)<0$, entonces $\\mu_j=0$.",
+        "Una inactive constraint no empuja el optimum; su multiplier no aporta fuerza.",
+        key="kkt_q1"
+    )
+    ai_bridge(
+        "**SVM** se entiende naturalmente con constraints y duality. **LASSO** usa an $L_1$ constraint para sparsity. "
+        "En safe ML y operations research, KKT conditions permiten auditar qué constraints realmente determinan la solution."
     )
 
 
@@ -5854,6 +6806,9 @@ SECTIONS = {
     "19. Differential Calculus para IA": sec_calculo,
     "20. Convexity": sec_Convexity,
     "21. Levenberg-Marquardt and NLS": sec_levenberg,
+    "22. Quasi-Newton, Nesterov and Subgradients": sec_quasi_newton_subgradients,
+    "23. Logistic Regression and SGD": sec_logistic_sgd,
+    "24. Constrained Optimization, KKT and Quadratic Programs": sec_constrained_kkt_qp,
 }
 
 NAV_GROUPS = {
@@ -5885,11 +6840,14 @@ NAV_GROUPS = {
         "15. Leyes Límite: LLN y CLT",
         "18. Método de los Momentos (MoM)",
     ],
-    "Optimización": [
+    "Optimization": [
         "19. Differential Calculus para IA",
         "20. Convexity",
         "17. Gradient Descent, Newton and Backtracking",
         "21. Levenberg-Marquardt and NLS",
+        "22. Quasi-Newton, Nesterov and Subgradients",
+        "23. Logistic Regression and SGD",
+        "24. Constrained Optimization, KKT and Quadratic Programs",
     ],
     "Aplicaciones algorítmicas": [
         "16. Algoritmos Aleatorizados",
@@ -6000,7 +6958,7 @@ SECTION_TAKEAWAYS = {
     "1. Espacios y Axiomas de Kolmogorov": (
         "Un probability model necesita outcomes, events y una regla de probabilidad.",
         "Para verificar que los cálculos probabilísticos posteriores sean coherentes.",
-        "No tratar las reglas de probabilidad como intuición opcional; son restricciones.",
+        "No tratar las reglas de probabilidad como intuición opcional; son constraints.",
     ),
     "2. Regla de Laplace y Combinatoria": (
         "El counting depende de order y replacement antes de elegir cualquier fórmula.",
@@ -6101,6 +7059,21 @@ SECTION_TAKEAWAYS = {
         "LM interpola entre steps estables tipo gradient y steps rápidos tipo Gauss-Newton.",
         "Para nonlinear least squares cuando hay Jacobians disponibles.",
         "No esperar que arregle automáticamente mala elección de model o inicialización imposible.",
+    ),
+    "22. Quasi-Newton, Nesterov and Subgradients": (
+        "Quasi-Newton methods aproximan curvature, Nesterov anticipa el Gradient y Subgradients manejan esquinas.",
+        "Para optimization cuando full Newton es caro, el valley es ill-conditioned o la loss no es smooth.",
+        "No asumir que cada Subgradient step reduce la loss de forma monotónica.",
+    ),
+    "23. Logistic Regression and SGD": (
+        "Logistic Regression convierte scores en probabilities y SGD estima el full Gradient con mini-batches.",
+        "Para classification probabilística y training escalable con datasets grandes.",
+        "No confundir noise del mini-batch con error puro: también cambia la dinámica de generalization.",
+    ),
+    "24. Constrained Optimization, KKT and Quadratic Programs": (
+        "KKT conditions combinan objective, constraints y multipliers para caracterizar optima constrained.",
+        "Para SVM, LASSO, quadratic programs y optimization con explicit constraints.",
+        "No resolver el unconstrained problem si el feasible set cambia la solución.",
     ),
 }
 
