@@ -1,0 +1,40 @@
+[theme]
+base = "light"
+primaryColor = "#1E5AA8"
+backgroundColor = "#F7F8FA"
+secondaryBackgroundColor = "#F1F5F9"
+textColor = "#111827"
+font = "sans serif"
+
+[theme.sidebar]
+primaryColor = "#1E5AA8"
+backgroundColor = "#F7F9FC"
+secondaryBackgroundColor = "#EEF2F7"
+textColor = "#111827"
+
+# Streamlit Cloud can initialize from the visitor's browser preference.
+# Keep the dark theme visually identical to the light theme so first load
+# never renders the app with dark defaults.
+[theme.dark]
+primaryColor = "#1E5AA8"
+backgroundColor = "#F7F8FA"
+secondaryBackgroundColor = "#F1F5F9"
+textColor = "#111827"
+
+[theme.dark.sidebar]
+primaryColor = "#1E5AA8"
+backgroundColor = "#F7F9FC"
+secondaryBackgroundColor = "#EEF2F7"
+textColor = "#111827"
+
+[theme.light]
+primaryColor = "#1E5AA8"
+backgroundColor = "#F7F8FA"
+secondaryBackgroundColor = "#F1F5F9"
+textColor = "#111827"
+
+[theme.light.sidebar]
+primaryColor = "#1E5AA8"
+backgroundColor = "#F7F9FC"
+secondaryBackgroundColor = "#EEF2F7"
+textColor = "#111827"
